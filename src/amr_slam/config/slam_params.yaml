@@ -1,0 +1,84 @@
+# slam_params.yaml — ver5.0 (optimized for 24×18m world)
+#
+# Các thay đổi so với ver cũ:
+#   minimum_time_interval: 0.5 → 0.2   (5 scan/s thay vì 2 scan/s)
+#   minimum_travel_distance: 0.5 → 0.2  (update khi di 20cm, không phải 50cm)
+#   minimum_travel_heading: 0.5 → 0.2   (update khi xoay 11°, không phải 28°)
+#   map_update_interval: 1.0 → 0.3      (map refresh 3x/s thay vì 1x/s)
+#   map_size: 60.0 → 30.0               (phù hợp world 24×18m, diagonal=30m)
+#   map_start_x/y: -30 → -13/-10        (tight bound, không lãng phí vùng trống)
+#   scan_buffer_maximum_scan_distance: 10→12  (dùng full LiDAR range)
+#   scan_buffer_size: 10 → 20           (buffer nhiều scan hơn)
+#   loop_match_maximum_variance: 15 → 3  (loop closure chính xác hơn)
+
+slam_toolbox:
+  ros__parameters:
+    use_sim_time: true
+
+    # ── Solver ────────────────────────────────────────────────────
+    solver_plugin:          solver_plugins::CeresSolver
+    ceres_linear_solver:    SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner:   SCHUR_JACOBI
+    ceres_trust_strategy:   LEVENBERG_MARQUARDT
+    ceres_dogleg_type:      TRADITIONAL_DOGLEG
+    ceres_loss_function:    None
+
+    # ── Frames ────────────────────────────────────────────────────
+    odom_frame:  odom
+    map_frame:   map
+    base_frame:  base_footprint
+    scan_topic:  /scan
+    mode:        mapping
+
+    # ── Map settings — world 24×16m (asymmetric, scaled ×1.333) ──
+    map_resolution:  0.05
+    map_size:        32.0       # covers diagonal sqrt(24²+16²)=28.8m + 3.2m margin
+    map_start_x:    -13.0       # x=-12 outer wall + 1m margin
+    map_start_y:    -9.0        # y=-8 outer wall + 1m margin
+
+    # ── Update frequency (Ryzen 7840H + LiDAR 30Hz) ──────────────────
+    # LiDAR 30Hz → minimum_time_interval=0.05 → 20 scan/giây được xử lý
+    map_update_interval:      0.1    # map publish 10x/giây (cũ: 0.2)
+    minimum_time_interval:    0.05   # 20 scan/giây (LiDAR@30Hz)
+    minimum_travel_distance:  0.08   # update khi di 8cm
+    minimum_travel_heading:   0.08   # update khi xoay 4.6°
+
+    # ── TF / Transform ────────────────────────────────────────────
+    transform_publish_period:  0.02
+    transform_timeout:         0.2
+    tf_buffer_duration:        30.0
+
+    # ── Scan matching ─────────────────────────────────────────────
+    use_scan_matching:    true
+    use_scan_barycenter:  true
+    max_laser_range:      12.0    # phải khớp với LiDAR max range
+    laser_min_range:       0.12   # khớp với LiDAR <min>0.12</min> trong URDF
+
+    # ── Scan buffer ───────────────────────────────────────────────
+    scan_buffer_size:                    30     # buffer nhiều hơn (cũ: 20)
+    scan_buffer_maximum_scan_distance:   12.0   # dùng full range (cũ: 10.0)
+
+    # ── Scan matching parameters ──────────────────────────────────
+    link_match_minimum_response_fine:  0.1
+    link_scan_maximum_distance:        1.5
+
+    # ── Loop closure ──────────────────────────────────────────────
+    do_loop_closing:               true
+    loop_search_maximum_distance:  3.0
+    loop_match_minimum_chain_size: 10
+    loop_match_maximum_variance:   3.0    # strict hơn (cũ: 15.0)
+    loop_search_space_dimension:   8.0
+
+    # ── Variance / angle search ───────────────────────────────────
+    distance_variance_penalty:  0.5
+    angle_variance_penalty:     1.0
+    fine_search_angle_offset:   0.00349
+    coarse_search_angle_offset: 0.349
+    coarse_angle_resolution:    0.0349
+    minimum_angle_penalty:      0.9
+    minimum_distance_penalty:   0.5
+    use_response_expansion:     true
+
+    # ── System ────────────────────────────────────────────────────
+    stack_size_to_use:       40000000
+    enable_interactive_mode: true
