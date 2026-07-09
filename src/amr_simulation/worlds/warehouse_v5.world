@@ -1,39 +1,4 @@
 <?xml version="1.0"?>
-<!--
-  warehouse_v5.world — AMR ver5.0 (ASYMMETRIC 24×16m)
-  Kích thước: x∈[-12,12], y∈[-8,8]
-
-  Thu phóng ×1.333 từ bản 18×12m trước, giữ nguyên layout bất đối xứng.
-
-  ══════════════════════════════════════════════════════════════════
-  LAYOUT (KHÔNG ĐỐI XỨNG):
-
-  y=8  ┌────────────────────────────────────────────────────────────┐
-        │                   North Room (24×4m)                       │
-        │   [box_n1]              [box_n2]             [box_n3]      │
-  y=4  ├────4m────[GAP 3m]────────8m────[GAP 3m]─────────6m────────┤
-        │              │                                             │
-        │   Room W     │             Central Zone                    │
-        │   (9×8m)    [GAP           (15×8m)                        │
-        │              3m]   3 pillars bất đối xứng                 │
-        │  shelf+box   │     shelf + crate                          │
-  y=-4 ├──────────────┴──10m──[GAP 4m]───5m──[GAP 3m]──2m─────────┤
-        │                   South Storage (24×4m)                    │
-        │   [box_s1]      [box_s2]  [box_s3]         [shelf_s1]     │
-  y=-8 └────────────────────────────────────────────────────────────┘
-       x=-12           x=-3                                      x=12
-
-  CỬA (tất cả rộng ≥ 3m — không khe hẹp):
-    North Room ↔ Room W    : y=4,  x∈[-8,-5]  (3m)
-    North Room ↔ Central   : y=4,  x∈[3,6]    (3m, lệch phải)
-    Room W     ↔ Central   : x=-3, y∈[-1,2]   (3m, lệch lên)
-    Central    ↔ S.Storage : y=-4, x∈[-2,2]   (4m, lệch trái)
-    Central    ↔ S.Storage : y=-4, x∈[7,10]   (3m, lệch phải)
-
-  Clearance tại cửa hẹp nhất (3m): 3.0 − 2×0.35 = 2.3m >> robot 0.4m ✓
-  LiDAR 12m + 3 pillars phân tán → SLAM anchor từ mọi vị trí ✓
-  ══════════════════════════════════════════════════════════════════
--->
 <sdf version="1.6">
   <world name="warehouse_v5">
 
