@@ -1,9 +1,4 @@
 <?xml version="1.0"?>
-<!-- amr_ver5.0/src/amr_description/urdf/amr_robot.urdf.xacro
-     Thay đổi so với ver4.0:
-       planar_move plugin subscribe /cmd_vel_safe (thay vì /cmd_vel)
-       → cmd_vel đi qua collision_warning_node trước khi tới robot
--->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="amr_robot">
 
   <xacro:property name="PI" value="3.14159265359"/>
@@ -21,12 +16,12 @@
   <xacro:property name="wheel_sep_x"   value="0.28"/>
   <xacro:property name="wheel_sep_y"   value="0.32"/>
 
-  <!-- ── Materials ──────────────────────────────────────────────────── -->
+  <!-- ── Materials -->
   <material name="chassis_blue">  <color rgba="0.15 0.35 0.75 1.0"/> </material>
   <material name="wheel_black">   <color rgba="0.10 0.10 0.10 1.0"/> </material>
   <material name="sensor_grey">   <color rgba="0.55 0.55 0.55 1.0"/> </material>
 
-  <!-- ── Base footprint ─────────────────────────────────────────────── -->
+  <!-- ── Base footprint  -->
   <link name="base_footprint"/>
   <joint name="base_footprint_to_base_link" type="fixed">
     <parent link="base_footprint"/>
@@ -34,7 +29,7 @@
     <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0"/>
   </joint>
 
-  <!-- ── Base link (chassis) ────────────────────────────────────────── -->
+  <!-- ── Base link (chassis)  -->
   <link name="base_link">
     <visual>
       <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
@@ -58,7 +53,7 @@
   </link>
   <gazebo reference="base_link"><material>Gazebo/Blue</material></gazebo>
 
-  <!-- ── Mecanum Wheel Macro ────────────────────────────────────────── -->
+  <!-- ── Mecanum Wheel Macro  -->
   <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos fdir1">
     <link name="${prefix}_wheel_link">
       <visual>
@@ -110,7 +105,7 @@
   <xacro:mecanum_wheel prefix="rear_right"
     x_pos="${-wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}" fdir1="0.707107  0.707107 0"/>
 
-  <!-- ── LiDAR ──────────────────────────────────────────────────────── -->
+  <!-- ── LiDAR  -->
   <link name="lidar_link">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
