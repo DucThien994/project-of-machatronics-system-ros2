@@ -1,43 +1,8 @@
 <?xml version="1.0"?>
-<!--
-  warehouse_v5.world — AMR ver5.0 (ASYMMETRIC 24×16m)
-  Kích thước: x∈[-12,12], y∈[-8,8]
-
-  Thu phóng ×1.333 từ bản 18×12m trước, giữ nguyên layout bất đối xứng.
-
-  ══════════════════════════════════════════════════════════════════
-  LAYOUT (KHÔNG ĐỐI XỨNG):
-
-  y=8  ┌────────────────────────────────────────────────────────────┐
-        │                   North Room (24×4m)                       │
-        │   [box_n1]              [box_n2]             [box_n3]      │
-  y=4  ├────4m────[GAP 3m]────────8m────[GAP 3m]─────────6m────────┤
-        │              │                                             │
-        │   Room W     │             Central Zone                    │
-        │   (9×8m)    [GAP           (15×8m)                        │
-        │              3m]   3 pillars bất đối xứng                 │
-        │  shelf+box   │     shelf + crate                          │
-  y=-4 ├──────────────┴──10m──[GAP 4m]───5m──[GAP 3m]──2m─────────┤
-        │                   South Storage (24×4m)                    │
-        │   [box_s1]      [box_s2]  [box_s3]         [shelf_s1]     │
-  y=-8 └────────────────────────────────────────────────────────────┘
-       x=-12           x=-3                                      x=12
-
-  CỬA (tất cả rộng ≥ 3m — không khe hẹp):
-    North Room ↔ Room W    : y=4,  x∈[-8,-5]  (3m)
-    North Room ↔ Central   : y=4,  x∈[3,6]    (3m, lệch phải)
-    Room W     ↔ Central   : x=-3, y∈[-1,2]   (3m, lệch lên)
-    Central    ↔ S.Storage : y=-4, x∈[-2,2]   (4m, lệch trái)
-    Central    ↔ S.Storage : y=-4, x∈[7,10]   (3m, lệch phải)
-
-  Clearance tại cửa hẹp nhất (3m): 3.0 − 2×0.35 = 2.3m >> robot 0.4m ✓
-  LiDAR 12m + 3 pillars phân tán → SLAM anchor từ mọi vị trí ✓
-  ══════════════════════════════════════════════════════════════════
--->
-<sdf version="1.6">
+git <sdf version="1.6">
   <world name="warehouse_v5">
 
-    <!-- ═══ LIGHTING + PHYSICS ══════════════════════════════════════ -->
+     <!--láya thông số của gazebo, ánh sáng, mặt đất  -->
     <include><uri>model://sun</uri></include>
     <include><uri>model://ground_plane</uri></include>
 
@@ -56,7 +21,7 @@
       <shadows>false</shadows>
     </scene>
 
-    <!-- ═══ OUTER PERIMETER WALLS ═══════════════════════════════════ -->
+    <!-- ═══ OUTER PERIMETER WALLS -->
 
     <model name="wall_north"><static>true</static><pose>0 8.15 0.75 0 0 0</pose>
       <link name="link">
@@ -166,9 +131,6 @@
       </link>
     </model>
 
-    <!-- [GAP x∈[-2,2] = 4m — Central ↔ South #1 (lệch trái)] -->
-
-    <!-- Segment G: x∈[2,7], len=5m, center=(4.5,-4) -->
     <model name="div_south_G"><static>true</static><pose>4.5 -4 0.75 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>5.0 0.3 1.5</size></box></geometry></collision>
@@ -177,9 +139,6 @@
       </link>
     </model>
 
-    <!-- [GAP x∈[7,10] = 3m — Central ↔ South #2 (lệch phải)] -->
-
-    <!-- Segment H: x∈[10,12], len=2m, center=(11,-4) -->
     <model name="div_south_H"><static>true</static><pose>11 -4 0.75 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>2.0 0.3 1.5</size></box></geometry></collision>
@@ -188,12 +147,6 @@
       </link>
     </model>
 
-    <!-- ═══ CYLINDER PILLARS — Central Zone (bất đối xứng) ═══════════
-         3 pillars tại vị trí không đều, radius=0.20m
-         → SLAM anchor từ mọi góc của Central Zone (15×8m)
-    ══════════════════════════════════════════════════════════════════ -->
-
-    <!-- pillar_1: (2, 2) — góc tây-bắc central -->
     <model name="pillar_1"><static>true</static><pose>2 2 0.75 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><cylinder><radius>0.20</radius><length>1.5</length></cylinder></geometry></collision>
@@ -202,7 +155,6 @@
       </link>
     </model>
 
-    <!-- pillar_2: (6, -2) — giữa central, lệch nam -->
     <model name="pillar_2"><static>true</static><pose>6 -2 0.75 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><cylinder><radius>0.20</radius><length>1.5</length></cylinder></geometry></collision>
@@ -211,7 +163,6 @@
       </link>
     </model>
 
-    <!-- pillar_3: (10, 0.7) — góc đông central -->
     <model name="pillar_3"><static>true</static><pose>10 0.7 0.75 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><cylinder><radius>0.20</radius><length>1.5</length></cylinder></geometry></collision>
@@ -220,9 +171,6 @@
       </link>
     </model>
 
-    <!-- ═══ OBSTACLES — North Room (y∈[4,8]) ════════════════════════ -->
-
-    <!-- box_n1: góc tây-bắc, xa cửa x∈[-8,-5] -->
     <model name="box_n1"><static>true</static><pose>-9.5 6.5 0.4 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>1.3 0.7 0.8</size></box></geometry></collision>
@@ -231,7 +179,6 @@
       </link>
     </model>
 
-    <!-- box_n2: giữa, lệch trái, xa cả 2 cửa -->
     <model name="box_n2"><static>true</static><pose>-0.5 6.0 0.4 0 0 0.5</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>1.0 1.3 0.8</size></box></geometry></collision>
@@ -240,7 +187,6 @@
       </link>
     </model>
 
-    <!-- box_n3: góc đông -->
     <model name="box_n3"><static>true</static><pose>10.0 6.8 0.4 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>0.8 0.8 0.8</size></box></geometry></collision>
@@ -249,9 +195,6 @@
       </link>
     </model>
 
-    <!-- ═══ OBSTACLES — Room W (x∈[-12,-3], y∈[-4,4]) ═════════════ -->
-
-    <!-- shelf_w1: dọc tường tây, không chặn cửa nào -->
     <model name="shelf_w1"><static>true</static><pose>-10.5 2.0 0.5 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>2.0 0.5 1.0</size></box></geometry></collision>
@@ -260,7 +203,6 @@
       </link>
     </model>
 
-    <!-- box_w1: giữa-nam Room W, không chặn cửa x=-3,y∈[-1,2] -->
     <model name="box_w1"><static>true</static><pose>-7.5 -2.5 0.4 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>1.0 1.0 0.8</size></box></geometry></collision>
@@ -269,9 +211,6 @@
       </link>
     </model>
 
-    <!-- ═══ OBSTACLES — Central Zone (x∈[-3,12], y∈[-4,4]) ══════════ -->
-
-    <!-- shelf_c1: gần tường nam, giữa 2 cửa nam (x=3.5, không chặn x∈[-2,2] hay x∈[7,10]) -->
     <model name="shelf_c1"><static>true</static><pose>3.5 -3.3 0.5 0 0 1.5707</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>1.3 0.5 1.0</size></box></geometry></collision>
@@ -300,7 +239,6 @@
       </link>
     </model>
 
-    <!-- box_s2: tây-trung, giữa hai cửa -->
     <model name="box_s2"><static>true</static><pose>-4.0 -6.5 0.4 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>1.0 1.0 0.8</size></box></geometry></collision>
@@ -309,7 +247,6 @@
       </link>
     </model>
 
-    <!-- box_s3: đông-trung, giữa 2 cửa (x=4, tránh xa x∈[-2,2] và x∈[7,10]) -->
     <model name="box_s3"><static>true</static><pose>4.0 -6.0 0.4 0 0 0.4</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>0.8 1.6 0.8</size></box></geometry></collision>
@@ -318,7 +255,6 @@
       </link>
     </model>
 
-    <!-- shelf_s1: góc đông-nam, xa cửa x∈[7,10] (shelf tại y=-6.4, cửa ở y=-4) -->
     <model name="shelf_s1"><static>true</static><pose>11.0 -6.2 0.5 0 0 0</pose>
       <link name="link">
         <collision name="col"><geometry><box><size>2.0 0.5 1.0</size></box></geometry></collision>
