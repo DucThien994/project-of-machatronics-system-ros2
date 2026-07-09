@@ -23,7 +23,5 @@ def generate_launch_description():
                 'publish_rate': 20.0,   # Hz
                 'cmd_timeout':   0.5,   # s
             }],
-            # Không remap — publish /cmd_vel_safe trực tiếp
-            # planar_move plugin đọc /cmd_vel_safe qua internal remap
         )
     ])

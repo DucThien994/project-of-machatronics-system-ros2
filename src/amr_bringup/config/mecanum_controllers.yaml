@@ -11,7 +11,7 @@ controller_manager:
 
 mecanum_drive_controller:
   ros__parameters:
-    reference_timeout: 0.5
+    reference_timeout: 0.5  # nếu sau 0.5s không có lệnh điều khiển thì v = 0 m/s | tránh trôi 
     use_stamped_vel: false            # nhận geometry_msgs/Twist thay vì TwistStamped
 
     front_left_wheel_command_joint_name:  "front_left_wheel_joint"
@@ -27,5 +27,6 @@ mecanum_drive_controller:
     base_frame_id: "base_footprint"
     odom_frame_id: "odom"
     enable_odom_tf: true
+    # sai số cho x, y, z, roll, pitch, yaw 
     twist_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
     pose_covariance_diagonal:  [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]

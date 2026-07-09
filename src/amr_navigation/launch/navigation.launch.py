@@ -1,26 +1,3 @@
-#!/usr/bin/env python3
-"""
-navigation.launch.py — ver5.0
-
-Hai chế độ hoạt động:
-  SLAM mode   (map=''):   Nav2 dùng map từ slam_toolbox (đang chạy).
-                          KHÔNG khởi động map_server và amcl vì:
-                            - slam_toolbox đã publish /map
-                            - slam_toolbox đã publish TF map→odom
-                          lifecycle_manager quản lý: controller, smoother, planner,
-                          behavior, bt_navigator, waypoint_follower
-  Saved-map mode (map≠''): Nav2 load map từ file YAML.
-                          Khởi động map_server + amcl.
-                          lifecycle_manager quản lý tất cả 8 nodes.
-
-Cách chạy:
-  SLAM mode:
-    ros2 launch amr_navigation navigation.launch.py
-    (thường được gọi từ bringup.launch.py với map='')
-
-  Saved-map mode:
-    ros2 launch amr_navigation navigation.launch.py map:=/path/to/map.yaml
-"""
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -35,7 +12,7 @@ def generate_launch_description():
     pkg_nav = get_package_share_directory('amr_navigation')
     default_params = os.path.join(pkg_nav, 'config', 'nav2_params.yaml')
 
-    # ── Launch arguments ───────────────────────────────────────────────────
+    # Launch arguments
     declare_use_sim_time = DeclareLaunchArgument(
         'use_sim_time', default_value='true')
     declare_map = DeclareLaunchArgument(
@@ -44,9 +21,7 @@ def generate_launch_description():
     declare_params = DeclareLaunchArgument(
         'params_file', default_value=default_params)
 
-    # ── Conditions ─────────────────────────────────────────────────────────
-    # use_saved_map = True  khi map path được cung cấp (≠ '')
-    # use_slam_map  = True  khi map path là '' (SLAM mode)
+    # ── Conditions 
     use_saved_map = PythonExpression(
         ["'", LaunchConfiguration('map'), "' != ''"])
     use_slam_map = PythonExpression(
@@ -57,10 +32,6 @@ def generate_launch_description():
         source_file=LaunchConfiguration('params_file'),
         param_rewrites={'use_sim_time': 'true'},
         convert_types=True)
-
-    # ══════════════════════════════════════════════════════════════════════
-    # SAVED-MAP MODE NODES (chỉ khởi động khi map != '')
-    # ══════════════════════════════════════════════════════════════════════
 
     map_server = Node(
         package='nav2_map_server', executable='map_server',
@@ -75,15 +46,13 @@ def generate_launch_description():
         condition=IfCondition(use_saved_map),
         parameters=[configured_params])
 
-    # ══════════════════════════════════════════════════════════════════════
-    # NAVIGATION NODES (luôn khởi động)
+    # luon khoi dong nav2
     # Nav2 publish /cmd_vel → collision_warning_node → /cmd_vel_safe → robot
-    # ══════════════════════════════════════════════════════════════════════
-
     controller_server = Node(
         package='nav2_controller', executable='controller_server',
         name='controller_server', output='screen',
-        parameters=[configured_params])
+        parameters=[configured_params],
+        remappings=[('cmd_vel', 'cmd_vel_nav')])  # Ép xuất ra cmd_vel_nav
 
     smoother_server = Node(
         package='nav2_smoother', executable='smoother_server',
@@ -98,7 +67,8 @@ def generate_launch_description():
     behavior_server = Node(
         package='nav2_behaviors', executable='behavior_server',
         name='behavior_server', output='screen',
-        parameters=[configured_params])
+        parameters=[configured_params],
+        remappings=[('cmd_vel', 'cmd_vel_nav')])  # Ép xuất ra cmd_vel_nav
 
     bt_navigator = Node(
         package='nav2_bt_navigator', executable='bt_navigator',
@@ -115,13 +85,9 @@ def generate_launch_description():
         name='velocity_smoother', output='screen',
         parameters=[configured_params],
         remappings=[
-            ('cmd_vel', 'cmd_vel'),
-            ('cmd_vel_smoothed', 'cmd_vel'),
+            ('cmd_vel', 'cmd_vel_nav'),             # Nhận đầu vào từ controller và behavior
+            ('cmd_vel_smoothed', 'cmd_vel'),        # Xuất đầu ra chuẩn bị cho collision_warning_node
         ])
-
-    # ══════════════════════════════════════════════════════════════════════
-    # LIFECYCLE MANAGERS — khác nhau tùy mode
-    # ══════════════════════════════════════════════════════════════════════
 
     # SLAM mode lifecycle: KHÔNG quản lý map_server/amcl
     lifecycle_manager_slam = Node(

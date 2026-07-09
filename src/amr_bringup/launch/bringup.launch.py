@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 bringup.launch.py — ver5.0 top-level orchestration
 Timeline:
@@ -11,18 +10,6 @@ Timeline:
   t=8.5s  → spawner mecanum_drive_controller (trong gazebo.launch.py)
   t=12s   → slam_toolbox (chờ /scan ổn định)
   t=20s   → Nav2 (chờ map→odom TF từ SLAM)
-
-Cách chạy:
-  # BƯỚC 1 — Quét map (Nav2 tắt):
-  ros2 launch amr_bringup bringup.launch.py nav:=false
-  # Sau đó dùng teleop quét, rồi lưu map:
-  # ros2 run nav2_map_server map_saver_cli -f ~/amr_ver5.0/maps/warehouse_v5_map
-
-  # BƯỚC 2 — SLAM + Nav2 (map từ slam_toolbox, không cần file):
-  ros2 launch amr_bringup bringup.launch.py
-
-  # BƯỚC 3 — Saved map + Nav2 (dùng map đã lưu):
-  ros2 launch amr_bringup bringup.launch.py slam:=false map:=/home/user/amr_ver5.0/maps/warehouse_v5_map.yaml
 """
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -40,6 +27,7 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
+    # khai báo thư viện, gắn đường dẫn 
     pkg_sim    = get_package_share_directory('amr_simulation')
     pkg_slam   = get_package_share_directory('amr_slam')
     pkg_nav    = get_package_share_directory('amr_navigation')
@@ -49,7 +37,8 @@ def generate_launch_description():
     # với argument 'params_file' của slam.launch.py trong cùng launch context
     nav2_params_file = os.path.join(pkg_nav, 'config', 'nav2_params.yaml')
 
-    # ── Launch arguments ───────────────────────────────────────────────────
+    # dùng để chạy có nav2 hoặc không
+    # thông số sẽ được thay thế vào trong default value 
     slam_arg = DeclareLaunchArgument('slam', default_value='true')
     nav_arg  = DeclareLaunchArgument('nav',  default_value='true')
     map_arg = DeclareLaunchArgument(
@@ -60,7 +49,7 @@ def generate_launch_description():
     y_pose_arg = DeclareLaunchArgument('y_pose', default_value='0.0')
     yaw_arg    = DeclareLaunchArgument('yaw',    default_value='0.0')
 
-    # ── 1. Simulation — t=0s ───────────────────────────────────────────────
+    # Simulation
     simulation = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_sim, 'launch', 'gazebo.launch.py')),
@@ -71,10 +60,7 @@ def generate_launch_description():
         }.items(),
     )
 
-    # ── 2. Safety node — t=5s ─────────────────────────────────────────────
-    # QUAN TRỌNG: Safety node phải khởi động trước khi robot cần di chuyển
-    # vì mecanum_drive_controller nhận lệnh qua /cmd_vel_safe (remap sang
-    # /mecanum_drive_controller/reference_unstamped)
+    # Safety phải hoạt động trước khi robot di chuyển
     safety_launch = TimerAction(
         period=5.0,
         actions=[
@@ -86,7 +72,7 @@ def generate_launch_description():
         ],
     )
 
-    # ── 3. SLAM — t=12s ───────────────────────────────────────────────────
+    # SLAM gửi data lên topic /scan
     slam_launch = TimerAction(
         period=12.0,
         actions=[
@@ -104,7 +90,7 @@ def generate_launch_description():
         ],
     )
 
-    # ── 4. Nav2 — t=20s ───────────────────────────────────────────────────
+    # Nav2
     nav_launch = TimerAction(
         period=20.0,
         actions=[

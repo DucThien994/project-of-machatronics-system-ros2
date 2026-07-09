@@ -1,56 +1,3 @@
-#!/usr/bin/env python3
-"""
-collision_warning_node.py — AMR Safety Monitor ver6.0 (Direction-Aware Mecanum)
-
-Pipeline:
-  teleop / Nav2  →  /cmd_vel  →  [THIS NODE]  →  /cmd_vel_safe
-                                      ↑                  ↓ (remap trong safety.launch.py)
-                                   /scan      /mecanum_drive_controller/reference_unstamped
-
-CƠ CHẾ DIRECTION-AWARE cho Mecanum (khác ver cũ):
-  ❌ Ver cũ: global_min (min của toàn bộ 720 tia) → 1 scale áp dụng cho vx+vy+wz
-     → tường 2 bên hành lang 0.8m → global_min=0.4m → WARNING → scale=40%
-     → góc: 1 tia < 0.30m → CRITICAL → DỪNG HOÀN TOÀN (dù đi thẳng là an toàn)
-
-  ✅ Ver mới: 4 cône phương hướng (chồng lấp ở đường chéo 45°)
-     - FRONT  (|θ| < 60°)          → kiểm soát vx > 0 (tiến)
-     - REAR   (|θ| > 120°)         → kiểm soát vx < 0 (lùi)
-     - LEFT   (30° < θ < 150°)     → kiểm soát vy > 0 (sang trái)
-     - RIGHT  (-150° < θ < -30°)   → kiểm soát vy < 0 (sang phải)
-     - ALL    (toàn vòng)           → kiểm soát wz (xoay)
-
-  Robot trong hành lang 0.8m (tường trái/phải ở 0.4m từ tâm):
-    LEFT min  = 0.4m → CAUTION → scale_left  = 75%
-    RIGHT min = 0.4m → CAUTION → scale_right = 75%
-    FRONT min = 5m   → SAFE    → scale_fwd   = 100%
-    → vx_safe = vx × 100%  (tiến với tốc độ đầy đủ) ✓
-    → vy_safe = vy × 75%   (giảm tốc ngang hợp lý)  ✓
-
-NGƯỠNG (khoảng cách từ tâm LiDAR → vật cản):
-  Robot: length=0.40m, width=0.30m → half-diagonal ≈ 0.25m
-
-  Translation (vx, vy):
-    CRITICAL: < 0.22m  scale=0%    (sắp chạm thân robot)
-    DANGER:   < 0.35m  scale=20%
-    WARNING:  < 0.55m  scale=50%
-    CAUTION:  < 0.80m  scale=75%
-    SAFE:     ≥ 0.80m  scale=100%
-
-  Rotation (wz) — ngưỡng rộng hơn vì góc robot quét arc lớn hơn:
-    CRITICAL: < 0.28m  scale=0%
-    DANGER:   < 0.40m  scale=30%
-    WARNING:  < 0.60m  scale=60%
-    CAUTION:  < 0.85m  scale=85%
-    SAFE:     ≥ 0.85m  scale=100%
-
-  Emergency ALL-STOP: bất kỳ tia nào < 0.15m → dừng vx+vy+wz
-
-Topics:
-  Subscribe:  /scan (LaserScan), /cmd_vel (Twist)
-  Publish:    /cmd_vel_safe (Twist), /collision_warning (String),
-              /safety/markers (MarkerArray)
-"""
-
 import math
 
 import numpy as np
@@ -143,7 +90,7 @@ class CollisionWarningNode(Node):
         rate             = self.get_parameter('publish_rate').value
         self.cmd_timeout = self.get_parameter('cmd_timeout').value
 
-        # ── State ────────────────────────────────────────────────────────────
+        # State 
         self.last_cmd      = Twist()
         self.last_cmd_time = self.get_clock().now()
 
@@ -167,18 +114,18 @@ class CollisionWarningNode(Node):
         self.min_left   = float('inf')
         self.min_rgt    = float('inf')
 
-        # ── QoS ──────────────────────────────────────────────────────────────
+        # QoS 
         sensor_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             durability=DurabilityPolicy.VOLATILE,
             depth=5,
         )
 
-        # ── Subscribers ──────────────────────────────────────────────────────
+        #  Subscribers 
         self.create_subscription(LaserScan, '/scan',    self.scan_callback, sensor_qos)
         self.create_subscription(Twist,     '/cmd_vel', self.cmd_callback,  10)
 
-        # ── Publishers ───────────────────────────────────────────────────────
+        # Publishers 
         self.cmd_safe_pub = self.create_publisher(Twist,       '/cmd_vel_safe',      10)
         self.warning_pub  = self.create_publisher(String,      '/collision_warning',  10)
         self.marker_pub   = self.create_publisher(MarkerArray, '/safety/markers',     10)
@@ -196,7 +143,6 @@ class CollisionWarningNode(Node):
             f'  Emergency all-stop: < {EMERGENCY_THRESHOLD}m'
         )
 
-    # ─────────────────────────────────────────────────────────────────────────
     def scan_callback(self, msg: LaserScan):
         n = len(msg.ranges)
         if n == 0:
@@ -214,7 +160,7 @@ class CollisionWarningNode(Node):
         angles = (msg.angle_min
                   + np.arange(n, dtype=np.float32) * msg.angle_increment)
 
-        # ── Directional masks ─────────────────────────────────────────────
+        #Directional masks 
         abs_a = np.abs(angles)
         front_mask = abs_a <= FRONT_HALF
         rear_mask  = abs_a >= REAR_MIN
@@ -230,13 +176,11 @@ class CollisionWarningNode(Node):
         self.min_left  = _min(left_mask)
         self.min_rgt   = _min(right_mask)
 
-        # ── Classify & scale ──────────────────────────────────────────────
+        # ── Classify & scale 
         self.level_fwd  = _classify(self.min_front,  THRESH_TRANS)
         self.level_bwd  = _classify(self.min_rear,   THRESH_TRANS)
         self.level_left = _classify(self.min_left,   THRESH_TRANS)
         self.level_rgt  = _classify(self.min_rgt,    THRESH_TRANS)
-        # FIX BUG-2: wz chỉ bị giới hạn bởi front/rear (không tính side walls)
-        # → tường bên hẹp trong corridor không cản trở khả năng quay đầu tại corner
         self.level_wz   = _classify(min(self.min_front, self.min_rear), THRESH_ROT)
 
         self.scale_fwd  = SCALE_TRANS[self.level_fwd]
@@ -271,12 +215,10 @@ class CollisionWarningNode(Node):
 
         self._publish_markers()
 
-    # ─────────────────────────────────────────────────────────────────────────
     def cmd_callback(self, msg: Twist):
         self.last_cmd      = msg
         self.last_cmd_time = self.get_clock().now()
 
-    # ─────────────────────────────────────────────────────────────────────────
     def publish_safe_cmd(self):
         elapsed = (self.get_clock().now() - self.last_cmd_time).nanoseconds / 1e9
         safe    = Twist()
@@ -307,7 +249,6 @@ class CollisionWarningNode(Node):
 
         self.cmd_safe_pub.publish(safe)
 
-    # ─────────────────────────────────────────────────────────────────────────
     def _publish_markers(self):
         markers     = MarkerArray()
         current_idx = LEVELS_ORDER.index(self.worst_level)
@@ -342,7 +283,6 @@ class CollisionWarningNode(Node):
             m.lifetime.nanosec = int(0.2e9)
             markers.markers.append(m)
 
-        # Text marker — per-axis scales visible in RViz2
         t = Marker()
         t.header.frame_id    = 'base_footprint'
         t.header.stamp       = self.get_clock().now().to_msg()
