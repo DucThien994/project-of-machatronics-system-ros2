@@ -1,5 +1,6 @@
 build/
 install/
 log/
+logs/
 tests/ 
 tools/ 
