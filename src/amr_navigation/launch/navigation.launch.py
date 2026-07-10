@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -27,7 +28,7 @@ def generate_launch_description():
     use_slam_map = PythonExpression(
         ["'", LaunchConfiguration('map'), "' == ''"])
 
-    # ── Params rewrite ─────────────────────────────────────────────────────
+    # ── Params rewrite 
     configured_params = RewrittenYaml(
         source_file=LaunchConfiguration('params_file'),
         param_rewrites={'use_sim_time': 'true'},
