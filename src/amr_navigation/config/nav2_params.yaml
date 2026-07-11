@@ -136,8 +136,8 @@ controller_server:
       gamma:        0.015
       motion_model: "Omni"   
       visualize:    false
-      critics: ["ConstraintCritic", "CostCritic", "GoalCritic",
-                "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic",
+      critics: ["ConstraintCritic", "CostCritic", "GoalCritic", 
+                "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", 
                 "PathAngleCritic", "PreferForwardCritic"]
       ConstraintCritic:
         enabled: true
@@ -150,8 +150,8 @@ controller_server:
         threshold_to_consider: 1.0
       GoalAngleCritic:
         enabled: true
-        cost_power:  1.2
-        #tang he so de ep goc 
+        cost_power:  1
+        #tang he so de ep goc
         cost_weight: 8.0
         threshold_to_consider: 1.0
       PreferForwardCritic:
