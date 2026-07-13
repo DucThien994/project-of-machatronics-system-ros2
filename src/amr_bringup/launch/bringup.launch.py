@@ -79,9 +79,9 @@ def generate_launch_description():
 
     # Nav2
     nav_launch = TimerAction(
-        period=20.0,
+        period=30.0,
         actions=[
-            LogInfo(msg='[bringup] t=20s: Khởi động Nav2...'),
+            LogInfo(msg='[bringup] t=30s: Khởi động Nav2...'),
             GroupAction(
                 actions=[
                     IncludeLaunchDescription(
