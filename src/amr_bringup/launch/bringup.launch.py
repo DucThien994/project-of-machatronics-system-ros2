@@ -1,16 +1,3 @@
-"""
-bringup.launch.py — ver5.0 top-level orchestration
-Timeline:
-  t=0s    → Gazebo + RSP + spawn robot (gazebo.launch.py)
-  t=5s    → spawn_entity hoàn tất (robot_description + controller_manager)
-  t=5s    → collision_warning_node (safety.launch.py)
-              Publish /cmd_vel_safe, remap sang
-              /mecanum_drive_controller/reference_unstamped
-  t=7s    → spawner joint_state_broadcaster (trong gazebo.launch.py)
-  t=8.5s  → spawner mecanum_drive_controller (trong gazebo.launch.py)
-  t=12s   → slam_toolbox (chờ /scan ổn định)
-  t=20s   → Nav2 (chờ map→odom TF từ SLAM)
-"""
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
