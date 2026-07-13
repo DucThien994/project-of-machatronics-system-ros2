@@ -23,5 +23,8 @@ def generate_launch_description():
                 'publish_rate': 20.0,   # Hz
                 'cmd_timeout':   0.5,   # s
             }],
+            # remap output collision_warning_node A9
+            remappings=[('/cmd_vel_safe', 
+                         '/mecanum_drive_controller/reference_unstamped')],
         )
     ])
