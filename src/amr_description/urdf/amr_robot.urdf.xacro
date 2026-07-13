@@ -207,39 +207,7 @@
       </plugin>
     </sensor>
   </gazebo>
-  <!-- <gazebo reference="imu_link">
-    <sensor name="imu_sensor" type="imu">
-      <always_on>true</always_on>
-      <update_rate>100</update_rate>
-      <visualize>false</visualize>
-      <imu>
-        <angular_velocity>
-          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></x>
-          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></y>
-          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></z>
-        </angular_velocity>
-        <linear_acceleration>
-          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
-          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
-          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
-        </linear_acceleration>
-      </imu>
-      <plugin name="gazebo_ros_imu" filename="libgazebo_ros_imu_sensor.so">
-        <ros>
-          <remapping>~/out:=imu/data</remapping>
-        </ros>
-        <initial_orientation_as_reference>true</initial_orientation_as_reference>
-        <frame_name>imu_link</frame_name>
-      </plugin>
-    </sensor>
-  </gazebo> -->
 
-  <!-- ══════════════════════════════════════════════════════════════════
-       HOLONOMIC PLANAR MOVE PLUGIN
-       ⚠️  Subscribe /cmd_vel_safe (NOT /cmd_vel)
-           → velocity đã được lọc bởi collision_warning_node
-       Publish /odom (TF map→odom handled by slam_toolbox/amcl)
-  ══════════════════════════════════════════════════════════════════ -->
   <gazebo>
     <plugin name="planar_move" filename="libgazebo_ros_planar_move.so">
       <ros>
