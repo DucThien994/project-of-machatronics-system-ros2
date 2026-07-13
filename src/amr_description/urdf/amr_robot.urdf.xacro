@@ -85,20 +85,23 @@
       <dynamics damping="0.02" friction="0.15"/>
     </joint>
     <gazebo reference="${prefix}_wheel_link">
-      <!-- changelog mục A4 (đã hiệu chỉnh sau khi debug ver3) -
+      <!-- FIX (bug: robot đứng yên trong Gazebo nhưng odometry vẫn tăng — bánh
+           quay tại chỗ không có độ bám / wheel-spin without traction):
            mu1 PHẢI giữ 0.0 — bánh mecanum ở đây mô phỏng bằng 1 cylinder + fdir1
-           (hack "friction direction" giả lập roller). Hack này chỉ ổn định khi
-           ma sát dọc trục roller = 0; mu1 > 0 phá vỡ giả định hình học của fdir1,
-           gây lực ma sát sai hướng → robot rung/trôi mất kiểm soát → odometry và
-           SLAM/costmap nhận pose sai liên tục (đã tái hiện lỗi này ở nhánh ver3).
-           Trượt thực tế vẫn mô phỏng được qua mu2 + slip1/slip2 mà không cần mu1>0. -->
+           (hack "friction direction" giả lập roller), chỉ ổn định khi ma sát dọc
+           trục roller = 0. Đã revert mu2: 0.8 → 1.0 và bỏ slip1/slip2 — tổ hợp
+           mu2=0.8 + slip1/slip2 (thêm ở đợt "thêm nhiễu thực tế") làm hệ ma sát
+           vốn đã mong manh (cylinder + fdir1 chưa từng được kiểm chứng khi còn
+           dùng planar_move) tụt dưới ngưỡng bám cần thiết → bánh quay nhưng
+           chassis không dịch chuyển → mecanum_drive_controller tính odometry từ
+           vận tốc khớp bánh (state_interface, vẫn quay bình thường) nên báo cáo
+           xe đã di chuyển dù thực tế đứng yên → TF/RViz lệch khỏi LiDAR thật.
+           Đồng thời giảm kp, tăng kd để tiếp xúc bánh-sàn ổn định hơn (giảm nảy). -->
       <mu1>0.0</mu1>
-      <mu2>0.8</mu2>
-      <slip1>0.05</slip1>
-      <slip2>0.02</slip2>
+      <mu2>1.0</mu2>
       <fdir1>${fdir1}</fdir1>
-      <kp>1000000.0</kp>
-      <kd>100.0</kd>
+      <kp>500000.0</kp>
+      <kd>200.0</kd>
       <minDepth>0.001</minDepth>
       <maxVel>5.0</maxVel>
       <material>Gazebo/Black</material>
