@@ -81,11 +81,11 @@
       <child  link="${prefix}_wheel_link"/>
       <origin xyz="${x_pos} ${y_pos} 0" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
-      <!-- changelog mục A5: tăng damping/friction — mô phỏng lực cản ổ trục/hộp số thật -->
+      <!-- changelog mục A5 - tăng damping/friction — mô phỏng lực cản ổ trục/hộp số thật -->
       <dynamics damping="0.02" friction="0.15"/>
     </joint>
     <gazebo reference="${prefix}_wheel_link">
-      <!-- changelog mục A4 (đã hiệu chỉnh sau khi debug ver3):
+      <!-- changelog mục A4 (đã hiệu chỉnh sau khi debug ver3) -
            mu1 PHẢI giữ 0.0 — bánh mecanum ở đây mô phỏng bằng 1 cylinder + fdir1
            (hack "friction direction" giả lập roller). Hack này chỉ ổn định khi
            ma sát dọc trục roller = 0; mu1 > 0 phá vỡ giả định hình học của fdir1,
@@ -115,7 +115,7 @@
   <xacro:mecanum_wheel prefix="rear_right"
     x_pos="${-wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}" fdir1="0.707107  0.707107 0"/>
 
-  <!-- changelog mục A2: ros2_control — thay thế planar_move, chuyển động
+  <!-- changelog mục A2 - ros2_control — thay thế planar_move, chuyển động
        thân xe là kết quả vật lý thật từ 4 khớp bánh, không phải lệnh set
        velocity trực tiếp lên base_link -->
   <ros2_control name="GazeboSystem" type="system">
@@ -246,14 +246,14 @@
       </plugin>
     </sensor>
   </gazebo>
-  <!-- FIX: đã xóa khối comment IMU chết (config noise cũ không dùng tới) -->
+  <!-- FIX - đã xóa khối comment IMU chết (config noise cũ không dùng tới) -->
 
-  <!-- FIX (changelog mục A1): đã xóa plugin libgazebo_ros_planar_move —
+  <!-- FIX (changelog mục A1) - đã xóa plugin libgazebo_ros_planar_move —
        không thể chạy song song với ros2_control (2 nguồn set velocity
        thân xe sẽ xung đột vật lý). Chuyển động giờ đi qua mecanum_drive_controller
        → 4 khớp bánh → vật lý Gazebo thật (xem mục A2 ở trên).
 
-       FIX (changelog mục A3, phần dọn dẹp): đã xóa plugin
+       FIX (changelog mục A3, phần dọn dẹp) - đã xóa plugin
        libgazebo_ros_joint_state_publisher — xung đột publisher /joint_states
        với joint_state_broadcaster của ros2_control (cùng ghi 1 topic cho
        cùng 4 khớp bánh, gây nhiễu dữ liệu joint state / giật TF bánh).
