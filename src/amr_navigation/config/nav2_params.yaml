@@ -44,7 +44,8 @@ bt_navigator:
     use_sim_time: true
     global_frame:      map
     robot_base_frame:  base_footprint
-    odom_topic:        /odom
+    # FIX: /odom không còn tồn tại sau khi chuyển sang mecanum_drive_controller
+    odom_topic:        /mecanum_drive_controller/odometry
     bt_loop_duration:  10
     default_server_timeout: 20
     navigators: ['navigate_to_pose', 'navigate_through_poses']
@@ -287,7 +288,7 @@ planner_server:
     GridBased:
       plugin:        "nav2_navfn_planner/NavfnPlanner"
       tolerance:     0.5
-      use_astar:     false
+      use_astar:     true
       allow_unknown: true
 
 smoother_server:
@@ -340,7 +341,8 @@ velocity_smoother:
     min_velocity:  [-0.50, -0.50, -1.20]
     max_accel:     [ 2.00,  2.00,  3.20]
     max_decel:     [-2.00, -2.00, -3.20]
-    odom_topic:    "odom"
+    # FIX: /odom không còn tồn tại — dùng odometry thật từ mecanum_drive_controller
+    odom_topic:    "/mecanum_drive_controller/odometry"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout:   1.0
