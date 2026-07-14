@@ -22,11 +22,12 @@ def generate_launch_description():
     declare_params = DeclareLaunchArgument(
         'params_file', default_value=default_params)
 
-    # ── Conditions 
+    # ── Conditions
+    # FIX: da xoa bien use_slam_map (khai bao nhung khong dung o dau ca - dead
+    # code). Che do SLAM/saved-map duoc xac dinh hoan toan qua use_saved_map
+    # (IfCondition) va UnlessCondition(use_saved_map) o duoi.
     use_saved_map = PythonExpression(
         ["'", LaunchConfiguration('map'), "' != ''"])
-    use_slam_map = PythonExpression(
-        ["'", LaunchConfiguration('map'), "' == ''"])
 
     # ── Params rewrite 
     configured_params = RewrittenYaml(

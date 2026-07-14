@@ -8,9 +8,9 @@ from launch.actions import (
     LogInfo,
     TimerAction,
 )
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 
 
 def generate_launch_description():
@@ -77,6 +77,26 @@ def generate_launch_description():
         ],
     )
 
+    # FIX: thong bao ro che do dinh vi dang chay - map='' (mac dinh) = SLAM
+    # mode, amcl KHONG duoc khoi dong => nut "2D Pose Estimate" trong RViz se
+    # khong co tac dung gi (khong co subscriber /initialpose), day la thiet
+    # ke dung cua Nav2 chu khong phai loi. Muon dung "2D Pose Estimate" phai
+    # chay voi map:=/duong/dan/den/map.yaml de bat saved-map mode (kich hoat
+    # amcl + map_server).
+    mode_notice = LogInfo(
+        condition=IfCondition(
+            PythonExpression(["'", LaunchConfiguration('map'), "' == ''"])),
+        msg=("[bringup] CHE DO: SLAM (map='' mac dinh) — amcl KHONG chay. "
+             "'2D Pose Estimate' trong RViz se KHONG co tac dung (khong co "
+             "subscriber /initialpose). Neu muon dung saved-map + amcl, chay "
+             "lai voi map:=/duong/dan/den/warehouse_v6_map.yaml"),
+    )
+    mode_notice_saved = LogInfo(
+        condition=UnlessCondition(
+            PythonExpression(["'", LaunchConfiguration('map'), "' == ''"])),
+        msg="[bringup] CHE DO: Saved-map + AMCL — '2D Pose Estimate' hoat dong binh thuong.",
+    )
+
     # Nav2
     nav_launch = TimerAction(
         period=30.0,
@@ -105,6 +125,8 @@ def generate_launch_description():
         slam_arg, nav_arg, map_arg,
         x_pose_arg, y_pose_arg, yaw_arg,
         simulation,
+        mode_notice,
+        mode_notice_saved,
         safety_launch,
         slam_launch,
         nav_launch,
