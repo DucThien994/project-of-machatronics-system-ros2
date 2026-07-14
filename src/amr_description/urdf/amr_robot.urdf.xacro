@@ -85,11 +85,11 @@
       <dynamics damping="0.02" friction="0.15"/>
     </joint>
     <gazebo reference="${prefix}_wheel_link">
-      <!-- FIX (bug: robot đứng yên trong Gazebo nhưng odometry vẫn tăng — bánh
-           quay tại chỗ không có độ bám / wheel-spin without traction):
+      <!-- FIX (bug - robot đứng yên trong Gazebo nhưng odometry vẫn tăng — bánh
+           quay tại chỗ không có độ bám / wheel-spin without traction) -
            mu1 PHẢI giữ 0.0 — bánh mecanum ở đây mô phỏng bằng 1 cylinder + fdir1
            (hack "friction direction" giả lập roller), chỉ ổn định khi ma sát dọc
-           trục roller = 0. Đã revert mu2: 0.8 → 1.0 và bỏ slip1/slip2 — tổ hợp
+           trục roller = 0. Đã revert mu2 0.8 → 1.0 và bỏ slip1/slip2 — tổ hợp
            mu2=0.8 + slip1/slip2 (thêm ở đợt "thêm nhiễu thực tế") làm hệ ma sát
            vốn đã mong manh (cylinder + fdir1 chưa từng được kiểm chứng khi còn
            dùng planar_move) tụt dưới ngưỡng bám cần thiết → bánh quay nhưng

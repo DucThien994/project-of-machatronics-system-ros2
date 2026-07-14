@@ -23,7 +23,7 @@ from launch.actions import (
 )
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 
 
 def generate_launch_description():
@@ -73,6 +73,13 @@ def generate_launch_description():
     )
 
     # SLAM gửi data lên topic /scan
+    # FIX: slam_toolbox CHỈ được chạy khi không có 'map' truyền vào. Trước đây
+    # slam_toolbox khởi động bất kể 'map' có giá trị hay không (chỉ phụ thuộc
+    # 'slam'), nên khi chạy `map:=...` (chế độ AMCL/localization dùng map đã
+    # lưu), slam_toolbox VẪN chạy song song với amcl — cả hai cùng publish
+    # map->odom TF và cùng ghi /map, gây xung đột (map/robot pose chập chờn
+    # hoặc biến mất trong RViz, đồng thời tăng tải CPU khiến lifecycle_manager
+    # timeout khi activate controller_server).
     slam_launch = TimerAction(
         period=12.0,
         actions=[
@@ -85,7 +92,10 @@ def generate_launch_description():
                         launch_arguments={'use_sim_time': 'true'}.items(),
                     )
                 ],
-                condition=IfCondition(LaunchConfiguration('slam')),
+                condition=IfCondition(PythonExpression([
+                    "'", LaunchConfiguration('slam'), "' == 'true' and '",
+                    LaunchConfiguration('map'), "' == ''",
+                ])),
             )
         ],
     )
