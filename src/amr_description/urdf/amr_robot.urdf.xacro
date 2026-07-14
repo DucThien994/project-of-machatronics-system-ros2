@@ -81,11 +81,15 @@
       <child  link="${prefix}_wheel_link"/>
       <origin xyz="${x_pos} ${y_pos} 0" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
-      <dynamics damping="0.005" friction="0.05"/>
+      <!-- increase damping/friction -->
+      <dynamics damping="0.02" friction="0.15"/>
     </joint>
     <gazebo reference="${prefix}_wheel_link">
-      <mu1>0.0</mu1>
-      <mu2>1.0</mu2>
+    <!-- add friction mecanum | real simulation | A4-->
+      <mu1>0.08</mu1>
+      <mu2>0.8</mu2>
+      <slip1>0.05</slip1>
+      <slip2>0.02</slip2>
       <fdir1>${fdir1}</fdir1>
       <kp>1000000.0</kp>
       <kd>100.0</kd>
@@ -104,6 +108,33 @@
     x_pos="${-wheel_sep_x/2}" y_pos="${ wheel_sep_y/2}" fdir1="0.707107 -0.707107 0"/>
   <xacro:mecanum_wheel prefix="rear_right"
     x_pos="${-wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}" fdir1="0.707107  0.707107 0"/>
+
+<!-- add ros2_control -->
+ <ros2_control name="GazeboSystem" type="system">
+   <hardware>
+     <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+   </hardware>
+   <joint name="front_left_wheel_joint">
+     <command_interface name="velocity"/>
+     <state_interface name="velocity"/>
+     <state_interface name="position"/>
+   </joint>
+   <joint name="front_right_wheel_joint">
+     <command_interface name="velocity"/>
+     <state_interface name="velocity"/>
+     <state_interface name="position"/>
+   </joint>
+   <joint name="rear_left_wheel_joint">
+     <command_interface name="velocity"/>
+     <state_interface name="velocity"/>
+     <state_interface name="position"/>
+   </joint>
+   <joint name="rear_right_wheel_joint">
+     <command_interface name="velocity"/>
+     <state_interface name="velocity"/>
+     <state_interface name="position"/>
+   </joint>
+ </ros2_control>
 
   <!-- ── LiDAR  -->
   <link name="lidar_link">
@@ -208,23 +239,6 @@
     </sensor>
   </gazebo>
 
-  <gazebo>
-    <plugin name="planar_move" filename="libgazebo_ros_planar_move.so">
-      <ros>
-        <remapping>cmd_vel:=cmd_vel_safe</remapping>
-        <remapping>odom:=odom</remapping>
-      </ros>
-      <update_rate>50.0</update_rate>
-      <robot_base_frame>base_footprint</robot_base_frame>
-      <odometry_frame>odom</odometry_frame>
-      <publish_odom>true</publish_odom>
-      <publish_odom_tf>true</publish_odom_tf>
-      <covariance_x>0.001</covariance_x>
-      <covariance_y>0.001</covariance_y>
-      <covariance_yaw>0.001</covariance_yaw>
-    </plugin>
-  </gazebo>
-
   <!-- Joint state publisher — wheel joints → /joint_states -->
   <gazebo>
     <plugin name="joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
@@ -234,6 +248,27 @@
       <joint_name>front_right_wheel_joint</joint_name>
       <joint_name>rear_left_wheel_joint</joint_name>
       <joint_name>rear_right_wheel_joint</joint_name>
+    </plugin>
+  </gazebo>
+
+<!-- add plugin gazebo_ros2_control | A3 -->
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <parameters>$(find amr_bringup)/config/mecanum_controllers.yaml</parameters>
+      <ros>
+        <!-- mecanum_drive_controller (ros2_controllers 2.53.1) publish TF trên topic
+             tương đối "~/tf_odometry" (tf2_msgs/TFMessage), KHÔNG publish thẳng ra /tf
+             như diff_drive_controller. Xác nhận bằng `strings libmecanum_drive_controller.so`
+             -> thấy "~/tf_odometry" và "~/odometry" là 2 topic riêng biệt. Không remap
+             dòng này thì "odom" không bao giờ xuất hiện trong TF tree dù enable_odom_tf:true
+             (đã kiểm chứng: controller active, param enable_odom_tf=true, nhưng
+             `ros2 topic info /tf -v` chỉ thấy 2 publisher là robot_state_publisher + amcl,
+             không có mecanum_drive_controller).
+             KHÔNG remap ~/odometry ở đây (giữ tên gốc /mecanum_drive_controller/odometry
+             cho bt_navigator.odom_topic) - dùng topic_tools relay trong gazebo.launch.py
+             để có thêm /odom cho velocity_smoother/RViz Odometry. -->
+        <remapping>/mecanum_drive_controller/tf_odometry:=/tf</remapping>
+      </ros>
     </plugin>
   </gazebo>
 

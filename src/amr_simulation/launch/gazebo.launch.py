@@ -69,9 +69,25 @@ def generate_launch_description():
         )
     ])
 
-    # NOTE: ros2_control spawners removed — robot uses libgazebo_ros_planar_move
-    # (holonomic planar_move handles cmd_vel_safe → odom directly,
-    #  libgazebo_ros_joint_state_publisher handles /joint_states)
+    # Add spawner controller 
+    joint_state_broadcaster_spawner = TimerAction(period=7.0, actions=[
+    Node(package='controller_manager', executable='spawner',
+          arguments=['joint_state_broadcaster'])
+    ])
+    
+    mecanum_controller_spawner = TimerAction(period=8.5, actions=[
+    Node(package='controller_manager', executable='spawner',
+        arguments=['mecanum_drive_controller'])
+    ])
+
+    # A3/A10: giữ /mecanum_drive_controller/odometry làm topic gốc (bt_navigator
+    # subscribe trực tiếp), relay thêm ra /odom cho velocity_smoother/RViz Odometry.
+    odom_relay = TimerAction(period=10.0, actions=[
+        Node(package='topic_tools', executable='relay',
+             name='odom_relay',
+             arguments=['/mecanum_drive_controller/odometry', '/odom'],
+             parameters=[{'use_sim_time': True}])
+    ])
 
     return LaunchDescription([
         gazebo_model_path,
@@ -80,4 +96,7 @@ def generate_launch_description():
         gazebo,
         rsp,
         spawn_robot,
+        joint_state_broadcaster_spawner,
+        mecanum_controller_spawner,
+        odom_relay,
     ])
