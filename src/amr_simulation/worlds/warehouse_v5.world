@@ -11,7 +11,13 @@
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1.0</real_time_factor>
       <ode>
-        <solver><type>world</type><iters>50</iters><sor>1.4</sor></solver>
+        <!-- FIX: revert type world -> quick theo yeu cau (khong doi tang vat ly
+             solver). Solver "world" (LCP/Dantzig) chinh xac hon nhung nang hon
+             dang ke ve tinh toan, de khien real-time-factor tut duoi 1.0 ->
+             bieu hien giong "xe boi roi, dap ung lau". iters/sor la tham so
+             rieng cua solver quick/SOR nen khoi phuc lai 150 (truoc do o "world"
+             thi 2 tham so nay khong co tac dung gi). -->
+        <solver><type>quick</type><iters>150</iters><sor>1.4</sor></solver>
       </ode>
     </physics>
 

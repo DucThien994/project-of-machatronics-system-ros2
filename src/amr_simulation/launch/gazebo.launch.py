@@ -4,9 +4,11 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
+    RegisterEventHandler,
     SetEnvironmentVariable,
     TimerAction,
 )
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, Command
 from launch_ros.actions import Node
@@ -69,25 +71,41 @@ def generate_launch_description():
         )
     ])
 
-    # Add spawner controller 
-    joint_state_broadcaster_spawner = TimerAction(period=7.0, actions=[
-    Node(package='controller_manager', executable='spawner',
-          arguments=['joint_state_broadcaster'])
-    ])
-    
-    mecanum_controller_spawner = TimerAction(period=8.5, actions=[
-    Node(package='controller_manager', executable='spawner',
-        arguments=['mecanum_drive_controller'])
-    ])
+    # FIX (thay cho TimerAction(period=7.0)/(period=8.5) co dinh): tren may
+    # cham hoac world nang vat ly, spawn_entity/controller_manager co the chua
+    # san sang dung luc 7s/8.5s -> spawner goi service load_controller se fail
+    # (exit non-zero) va mecanum_drive_controller/joint_state_broadcaster KHONG
+    # BAO GIO duoc load, khien robot dung yen tuyet doi trong Gazebo du Nav2/
+    # cmd_vel van chay binh thuong. Thay bang OnProcessExit: moi spawner chi
+    # chay SAU KHI buoc truoc do da thuc su hoan tat, bat ke may nhanh/cham.
+    # Dong thoi bo odom_relay - nav2_params.yaml da remap odom_topic thang ve
+    # /mecanum_drive_controller/odometry, khong con phu thuoc vao relay nay nua
+    # (giam 1 mat xich co the fail/cham khoi chuoi khoi dong).
+    joint_state_broadcaster_spawner = Node(
+        package='controller_manager', executable='spawner',
+        arguments=['joint_state_broadcaster'], output='screen')
 
-    # A3/A10: giữ /mecanum_drive_controller/odometry làm topic gốc (bt_navigator
-    # subscribe trực tiếp), relay thêm ra /odom cho velocity_smoother/RViz Odometry.
-    odom_relay = TimerAction(period=10.0, actions=[
-        Node(package='topic_tools', executable='relay',
-             name='odom_relay',
-             arguments=['/mecanum_drive_controller/odometry', '/odom'],
-             parameters=[{'use_sim_time': True}])
-    ])
+    mecanum_controller_spawner = Node(
+        package='controller_manager', executable='spawner',
+        arguments=['mecanum_drive_controller'], output='screen')
+
+    # spawn_robot (TimerAction period=5.0) boc 1 Node spawn_entity.py ben trong
+    # - lay dung Node do ra de gan event handler OnProcessExit.
+    spawn_entity_node = spawn_robot.actions[0]
+
+    start_joint_state_broadcaster = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=spawn_entity_node,
+            on_exit=[joint_state_broadcaster_spawner],
+        )
+    )
+
+    start_mecanum_controller = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=joint_state_broadcaster_spawner,
+            on_exit=[mecanum_controller_spawner],
+        )
+    )
 
     return LaunchDescription([
         gazebo_model_path,
@@ -96,7 +114,6 @@ def generate_launch_description():
         gazebo,
         rsp,
         spawn_robot,
-        joint_state_broadcaster_spawner,
-        mecanum_controller_spawner,
-        odom_relay,
+        start_joint_state_broadcaster,
+        start_mecanum_controller,
     ])
