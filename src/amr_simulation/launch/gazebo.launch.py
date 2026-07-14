@@ -8,10 +8,15 @@ Pipeline cmd_vel:
   → (remap) /mecanum_drive_controller/reference_unstamped → mecanum_drive_controller
   → 4x wheel_joint velocity command (gazebo_ros2_control)
 
-Thứ tự khởi động (tương đối, tính từ lúc gazebo.launch.py bắt đầu):
+Thứ tự khởi động:
   t=5.0s  spawn_entity (robot_description → Gazebo, kèm ros2_control + controller_manager)
-  t=7.0s  spawner joint_state_broadcaster
-  t=8.5s  spawner mecanum_drive_controller
+  (OnProcessExit spawn_entity)   → spawner joint_state_broadcaster
+  (OnProcessExit joint_state_broadcaster) → spawner mecanum_drive_controller
+  FIX: 2 spawner trước đây bấm giờ cố định (t=7s/t=8.5s) — trên máy chậm
+  chúng có thể chạy trước khi controller_manager sẵn sàng và fail âm thầm,
+  khiến mecanum_drive_controller không bao giờ được load (robot đứng yên
+  trong Gazebo dù Nav2 vẫn publish cmd_vel bình thường). Giờ dùng
+  RegisterEventHandler(OnProcessExit) để đảm bảo thứ tự đúng bất kể tốc độ máy.
 """
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -19,9 +24,11 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
+    RegisterEventHandler,
     SetEnvironmentVariable,
     TimerAction,
 )
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, Command
 from launch_ros.actions import Node
@@ -84,18 +91,40 @@ def generate_launch_description():
         )
     ])
 
-    # FIX: docstring đầu file đã mô tả pipeline ros2_control (t=7s/t=8.5s)
-    # nhưng code trước đây chưa thực sự spawn 2 controller này — bổ sung lại
-    # cho khớp với mô tả và với urdf.xacro (đã bỏ planar_move, dùng ros2_control).
-    joint_state_broadcaster_spawner = TimerAction(period=7.0, actions=[
-        Node(package='controller_manager', executable='spawner',
-             arguments=['joint_state_broadcaster'])
-    ])
+    # FIX (thay cho TimerAction(period=7.0)/(period=8.5) cũ): trên máy chậm
+    # hoặc world nặng vật lý, spawn_entity/controller_manager có thể chưa sẵn
+    # sàng đúng lúc 7s/8.5s — khi đó `spawner` gọi service load_controller sẽ
+    # fail (exit non-zero) và mecanum_drive_controller/joint_state_broadcaster
+    # KHÔNG BAO GIỜ được load, khiến robot đứng yên tuyệt đối trong Gazebo dù
+    # Nav2/cmd_vel vẫn chạy bình thường (xem báo cáo debug "AMR ver6.0 -
+    # robot không di chuyển trong Gazebo"). Thay bằng OnProcessExit: mỗi
+    # spawner chỉ chạy SAU KHI bước trước đó đã thực sự hoàn tất, bất kể máy
+    # nhanh/chậm.
+    joint_state_broadcaster_spawner = Node(
+        package='controller_manager', executable='spawner',
+        arguments=['joint_state_broadcaster'], output='screen')
 
-    mecanum_controller_spawner = TimerAction(period=8.5, actions=[
-        Node(package='controller_manager', executable='spawner',
-             arguments=['mecanum_drive_controller'])
-    ])
+    mecanum_controller_spawner = Node(
+        package='controller_manager', executable='spawner',
+        arguments=['mecanum_drive_controller'], output='screen')
+
+    # spawn_robot (TimerAction period=5.0) bọc 1 Node spawn_entity.py bên
+    # trong — lấy đúng Node đó ra để gắn event handler OnProcessExit.
+    spawn_entity_node = spawn_robot.actions[0]
+
+    start_joint_state_broadcaster = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=spawn_entity_node,
+            on_exit=[joint_state_broadcaster_spawner],
+        )
+    )
+
+    start_mecanum_controller = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=joint_state_broadcaster_spawner,
+            on_exit=[mecanum_controller_spawner],
+        )
+    )
 
     return LaunchDescription([
         gazebo_model_path,
@@ -104,6 +133,6 @@ def generate_launch_description():
         gazebo,
         rsp,
         spawn_robot,
-        joint_state_broadcaster_spawner,
-        mecanum_controller_spawner,
+        start_joint_state_broadcaster,
+        start_mecanum_controller,
     ])
