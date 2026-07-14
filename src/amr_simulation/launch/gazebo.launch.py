@@ -80,6 +80,15 @@ def generate_launch_description():
         arguments=['mecanum_drive_controller'])
     ])
 
+    # A3/A10: giữ /mecanum_drive_controller/odometry làm topic gốc (bt_navigator
+    # subscribe trực tiếp), relay thêm ra /odom cho velocity_smoother/RViz Odometry.
+    odom_relay = TimerAction(period=10.0, actions=[
+        Node(package='topic_tools', executable='relay',
+             name='odom_relay',
+             arguments=['/mecanum_drive_controller/odometry', '/odom'],
+             parameters=[{'use_sim_time': True}])
+    ])
+
     return LaunchDescription([
         gazebo_model_path,
         gazebo_resource_path,
@@ -89,4 +98,5 @@ def generate_launch_description():
         spawn_robot,
         joint_state_broadcaster_spawner,
         mecanum_controller_spawner,
+        odom_relay,
     ])

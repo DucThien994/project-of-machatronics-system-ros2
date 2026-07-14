@@ -256,6 +256,17 @@
     <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
       <parameters>$(find amr_bringup)/config/mecanum_controllers.yaml</parameters>
       <ros>
+        <!-- mecanum_drive_controller (ros2_controllers 2.53.1) publish TF trên topic
+             tương đối "~/tf_odometry" (tf2_msgs/TFMessage), KHÔNG publish thẳng ra /tf
+             như diff_drive_controller. Xác nhận bằng `strings libmecanum_drive_controller.so`
+             -> thấy "~/tf_odometry" và "~/odometry" là 2 topic riêng biệt. Không remap
+             dòng này thì "odom" không bao giờ xuất hiện trong TF tree dù enable_odom_tf:true
+             (đã kiểm chứng: controller active, param enable_odom_tf=true, nhưng
+             `ros2 topic info /tf -v` chỉ thấy 2 publisher là robot_state_publisher + amcl,
+             không có mecanum_drive_controller).
+             KHÔNG remap ~/odometry ở đây (giữ tên gốc /mecanum_drive_controller/odometry
+             cho bt_navigator.odom_topic) - dùng topic_tools relay trong gazebo.launch.py
+             để có thêm /odom cho velocity_smoother/RViz Odometry. -->
         <remapping>/mecanum_drive_controller/tf_odometry:=/tf</remapping>
       </ros>
     </plugin>

@@ -23,3 +23,18 @@ mecanum_drive_controller:
     odom_frame_id: "odom"
     enable_odom_tf: true
 
+    # A6: covariance theo độ phân giải encoder + trượt bánh thực tế (Phụ lục D)
+    # thay vì [0.001]*6 lý tưởng hóa của bản cũ.
+    twist_covariance_diagonal: [0.01, 0.01, 0.01, 0.01, 0.01, 0.02]
+    pose_covariance_diagonal:  [0.01, 0.01, 0.01, 0.01, 0.01, 0.02]
+
+    # FIX: MecanumDriveController mặc định publish /tf với Durability = TRANSIENT_LOCAL,
+    # trong khi robot_state_publisher và amcl publish /tf với VOLATILE.
+    # RViz2 (và các subscriber /tf khác) mở SAU khi controller đã chạy sẽ không nhận được
+    # transform odom -> base_footprint theo thời gian thực => robot/lidar bị "đứng hình"
+    # tại vị trí ban đầu dù Gazebo vẫn di chuyển robot thật sự.
+    qos_overrides:
+      /tf:
+        publisher:
+          durability: volatile
+
