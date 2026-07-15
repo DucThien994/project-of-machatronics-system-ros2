@@ -17,5 +17,14 @@
   <exec_depend>nav2_bt_navigator</exec_depend>
   <exec_depend>nav2_lifecycle_manager</exec_depend>
   <exec_depend>nav2_mppi_controller</exec_depend>
+
+  <!-- Dependency cho tool nav2_random_pose_test.py -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>nav2_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>action_msgs</exec_depend>
+
   <export><build_type>ament_cmake</build_type></export>
 </package>
