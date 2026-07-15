@@ -82,9 +82,14 @@
       <origin xyz="${x_pos} ${y_pos} 0" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
       <dynamics damping="0.005" friction="0.05"/>
+      <!-- effort/velocity bat buoc phai co de gazebo_ros2_control dat fmax
+           (luc dong co toi da) cho ODE velocity motor - thieu tag nay
+           fmax mac dinh = 0, banh nhan dung velocity command nhung khong
+           sinh luc quay thuc te -->
+      <limit effort="50.0" velocity="20.0"/>
     </joint>
     <gazebo reference="${prefix}_wheel_link">
-      <mu1>0.0</mu1>
+      <mu1>0.001</mu1>
       <mu2>1.0</mu2>
       <fdir1>${fdir1}</fdir1>
       <kp>1000000.0</kp>
@@ -235,37 +240,48 @@
   </gazebo> -->
 
   <!-- ══════════════════════════════════════════════════════════════════
-       HOLONOMIC PLANAR MOVE PLUGIN
-       ⚠️  Subscribe /cmd_vel_safe (NOT /cmd_vel)
-           → velocity đã được lọc bởi collision_warning_node
-       Publish /odom (TF map→odom handled by slam_toolbox/amcl)
+       ROS2_CONTROL — mecanum_drive_controller điều khiển 4 bánh qua
+       velocity command interface. GazeboSystem đọc/ghi các interface này
+       mỗi timestep, motion holonomic được physics engine (ODE) tính ra
+       từ tốc độ quay bánh + ma sát dị hướng (mu1/mu2/fdir1) thay vì bị
+       ép thẳng lên thân xe như planar_move trước đây.
   ══════════════════════════════════════════════════════════════════ -->
-  <gazebo>
-    <plugin name="planar_move" filename="libgazebo_ros_planar_move.so">
-      <ros>
-        <remapping>cmd_vel:=cmd_vel_safe</remapping>
-        <remapping>odom:=odom</remapping>
-      </ros>
-      <update_rate>50.0</update_rate>
-      <robot_base_frame>base_footprint</robot_base_frame>
-      <odometry_frame>odom</odometry_frame>
-      <publish_odom>true</publish_odom>
-      <publish_odom_tf>true</publish_odom_tf>
-      <covariance_x>0.001</covariance_x>
-      <covariance_y>0.001</covariance_y>
-      <covariance_yaw>0.001</covariance_yaw>
-    </plugin>
-  </gazebo>
+  <ros2_control name="amr_ros2_control" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+    <joint name="front_left_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="front_right_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="rear_left_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="rear_right_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+  </ros2_control>
 
-  <!-- Joint state publisher — wheel joints → /joint_states -->
   <gazebo>
-    <plugin name="joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
-      <ros><remapping>~/out:=joint_states</remapping></ros>
-      <update_rate>50</update_rate>
-      <joint_name>front_left_wheel_joint</joint_name>
-      <joint_name>front_right_wheel_joint</joint_name>
-      <joint_name>rear_left_wheel_joint</joint_name>
-      <joint_name>rear_right_wheel_joint</joint_name>
+    <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+      <parameters>$(find amr_bringup)/config/mecanum_controllers.yaml</parameters>
+      <ros>
+        <!-- mecanum_drive_controller publish odom + TF theo namespace rieng
+             cua no (~/odometry, ~/tf_odometry), remap ve /odom va /tf chuan
+             de Nav2/TF tree nhan duoc -->
+        <remapping>/mecanum_drive_controller/odometry:=/odom</remapping>
+        <remapping>/mecanum_drive_controller/tf_odometry:=/tf</remapping>
+      </ros>
     </plugin>
   </gazebo>
 

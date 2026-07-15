@@ -4,9 +4,10 @@ safety.launch.py — Launch collision_warning_node
 
 Pipeline:
   Nav2/teleop → /cmd_vel → collision_warning_node → /cmd_vel_safe
+                                                         ↓ (remap)
+                                    /mecanum_drive_controller/reference_unstamped
                                                          ↓
-                                             planar_move plugin
-                                        (URDF: remapping cmd_vel:=cmd_vel_safe)
+                                             mecanum_drive_controller
 """
 from launch import LaunchDescription
 from launch_ros.actions import Node
@@ -23,5 +24,8 @@ def generate_launch_description():
                 'publish_rate': 20.0,   # Hz
                 'cmd_timeout':   0.5,   # s
             }],
+            remappings=[
+                ('/cmd_vel_safe', '/mecanum_drive_controller/reference_unstamped'),
+            ],
         )
     ])

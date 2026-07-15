@@ -9,7 +9,8 @@ Pipeline cmd_vel:
   → 4x wheel_joint velocity command (gazebo_ros2_control)
 
 Thứ tự khởi động (tương đối, tính từ lúc gazebo.launch.py bắt đầu):
-  t=5.0s  spawn_entity (robot_description → Gazebo, kèm ros2_control + controller_manager)
+  t=5.0s  spawn_entity (robot_description → Gazebo, kèm ros2_control + controller_manager
+          do plugin gazebo_ros2_control tự khởi tạo bên trong tiến trình Gazebo)
   t=7.0s  spawner joint_state_broadcaster
   t=8.5s  spawner mecanum_drive_controller
 """
@@ -84,9 +85,25 @@ def generate_launch_description():
         )
     ])
 
-    # NOTE: ros2_control spawners removed — robot uses libgazebo_ros_planar_move
-    # (holonomic planar_move handles cmd_vel_safe → odom directly,
-    #  libgazebo_ros_joint_state_publisher handles /joint_states)
+    # gazebo_ros2_control (nạp qua plugin trong URDF) tự tạo controller_manager
+    # ngay khi robot được spawn — chỉ cần spawner claim 2 controller sau đó.
+    joint_state_broadcaster_spawner = TimerAction(period=7.0, actions=[
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['joint_state_broadcaster'],
+            output='screen',
+        )
+    ])
+
+    mecanum_drive_controller_spawner = TimerAction(period=8.5, actions=[
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['mecanum_drive_controller'],
+            output='screen',
+        )
+    ])
 
     return LaunchDescription([
         gazebo_model_path,
@@ -95,4 +112,6 @@ def generate_launch_description():
         gazebo,
         rsp,
         spawn_robot,
+        joint_state_broadcaster_spawner,
+        mecanum_drive_controller_spawner,
     ])
