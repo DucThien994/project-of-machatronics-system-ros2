@@ -83,6 +83,19 @@
       <axis xyz="0 1 0"/>
       <!-- changelog mục A5 - tăng damping/friction — mô phỏng lực cản ổ trục/hộp số thật -->
       <dynamics damping="0.02" friction="0.15"/>
+      <!-- FIX (root cause thật của "xe đứng yên trong Gazebo dù RViz/odometry
+           vẫn tăng" — đối chiếu Notion mục 5 "lực truyền động không đủ"):
+           joint continuous KHÔNG có <limit> → gazebo_ros2_control
+           (default_robot_hw_sim, command_interface="velocity") sẽ set
+           fmax = 0 cho joint này trong ODE. Joint vẫn nhận lệnh vận tốc và
+           state_interface vẫn báo quay bình thường (nên odometry/TF/RViz vẫn
+           chạy), nhưng lực cho phép = 0 nên bánh không sinh được lực đẩy nào
+           lên khung xe → chassis không dịch chuyển. Đây là nguyên nhân nền,
+           độc lập với mu1/mu2/kp/kd đã chỉnh ở khối <gazebo> bên dưới.
+           velocity limit tính từ kinematics: (vx_max+vy_max+l*wz_max)/r
+           = (0.5+0.5+0.30*1.3)/0.075 ≈ 18.5 rad/s → đặt 20 rad/s biên an toàn.
+           effort 20 N·m đủ lớn so với joint friction 0.15 N·m ở trên. -->
+      <limit lower="-1e16" upper="1e16" effort="20.0" velocity="20.0"/>
     </joint>
     <gazebo reference="${prefix}_wheel_link">
       <!-- FIX (bug: robot đứng yên trong Gazebo nhưng odometry vẫn tăng — bánh
