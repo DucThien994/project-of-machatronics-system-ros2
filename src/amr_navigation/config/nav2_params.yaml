@@ -6,6 +6,18 @@ amcl:
     odom_frame_id:    "odom"
     global_frame_id:  "map"
     scan_topic:       scan
+    # FIX: robot luôn spawn tại (0,0,0) trong gazebo.launch.py (x_pose/y_pose/yaw
+    # mặc định = 0.0). Không set initial pose thì AMCL không publish map->odom TF
+    # cho đến khi người dùng tự bấm "2D Pose Estimate" trong RViz — trong lúc đó
+    # global_costmap/planner_server treo vô thời hạn chờ TF map->base_footprint
+    # (không lỗi, không log rõ ràng), khiến toàn bộ Nav2 trông như "không có gì"
+    # (không robot, không map) dù thực chất chỉ đang chờ pose ban đầu.
+    set_initial_pose: true
+    initial_pose:
+      x:   0.0
+      y:   0.0
+      z:   0.0
+      yaw: 0.0
     alpha1: 0.2
     alpha2: 0.2
     alpha3: 0.2

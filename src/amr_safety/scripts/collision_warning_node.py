@@ -55,6 +55,11 @@ REAR_MIN   = math.pi * 2 / 3      # beyond +-120° = rear region
 SIDE_MIN   = math.pi / 6          # 30°
 SIDE_MAX   = math.pi * 5 / 6      # 150°
 
+# Tolerance for floating-point angle boundary comparisons (LiDAR angle arrays
+# are built by repeated float addition, so a ray meant to sit exactly on a
+# zone boundary can land a few ULPs to either side).
+ANGLE_EPS  = 1e-9
+
 # ── Marker colors ─────────────────────────────────────────────────────────────
 MARKER_COLOR = {
     'CRITICAL': (1.0, 0.0, 0.0, 0.60),
@@ -161,12 +166,13 @@ class CollisionWarningNode(Node):
         angles = (msg.angle_min
                   + np.arange(n, dtype=np.float32) * msg.angle_increment)
 
-        #Directional masks 
+        #Directional masks
         abs_a = np.abs(angles)
-        front_mask = abs_a <= FRONT_HALF
-        rear_mask  = abs_a >= REAR_MIN
-        left_mask  = (angles >= SIDE_MIN) & (angles <= SIDE_MAX)
-        right_mask = (angles <= -SIDE_MIN) & (angles >= -SIDE_MAX)
+        front_mask = abs_a <= FRONT_HALF + ANGLE_EPS
+        rear_mask  = abs_a >= REAR_MIN - ANGLE_EPS
+        side_mask  = (abs_a >= SIDE_MIN - ANGLE_EPS) & (abs_a <= SIDE_MAX + ANGLE_EPS)
+        left_mask  = side_mask & (angles > 0)
+        right_mask = side_mask & (angles < 0)
 
         def _min(mask):
             s = ranges[mask]
