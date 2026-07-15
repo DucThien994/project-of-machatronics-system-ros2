@@ -54,7 +54,7 @@
   <gazebo reference="base_link"><material>Gazebo/Blue</material></gazebo>
 
   <!-- ── Mecanum Wheel Macro  -->
-  <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos fdir1">
+  <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos">
     <link name="${prefix}_wheel_link">
       <visual>
         <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
@@ -85,21 +85,28 @@
       <dynamics damping="0.02" friction="0.15"/>
     </joint>
     <gazebo reference="${prefix}_wheel_link">
-      <!-- FIX (bug - robot đứng yên trong Gazebo nhưng odometry vẫn tăng — bánh
-           quay tại chỗ không có độ bám / wheel-spin without traction) -
-           mu1 PHẢI giữ 0.0 — bánh mecanum ở đây mô phỏng bằng 1 cylinder + fdir1
-           (hack "friction direction" giả lập roller), chỉ ổn định khi ma sát dọc
-           trục roller = 0. Đã revert mu2 0.8 → 1.0 và bỏ slip1/slip2 — tổ hợp
-           mu2=0.8 + slip1/slip2 (thêm ở đợt "thêm nhiễu thực tế") làm hệ ma sát
-           vốn đã mong manh (cylinder + fdir1 chưa từng được kiểm chứng khi còn
-           dùng planar_move) tụt dưới ngưỡng bám cần thiết → bánh quay nhưng
-           chassis không dịch chuyển → mecanum_drive_controller tính odometry từ
-           vận tốc khớp bánh (state_interface, vẫn quay bình thường) nên báo cáo
-           xe đã di chuyển dù thực tế đứng yên → TF/RViz lệch khỏi LiDAR thật.
-           Đồng thời giảm kp, tăng kd để tiếp xúc bánh-sàn ổn định hơn (giảm nảy). -->
-      <mu1>0.0</mu1>
+      <!-- FIX (bug - robot đứng yên trong Gazebo dù bánh quay đúng dấu/tốc độ,
+           odometry vẫn tăng bình thường) - kỹ thuật cũ mô phỏng roller mecanum
+           bằng 1 cylinder + fdir1 (mu1=0 dọc trục roller, mu2=1 vuông góc) có
+           lỗi nền tảng trong Gazebo Classic — fdir1 được tính trong hệ tọa độ
+           cục bộ của collision, mà collision này gắn trên continuous joint
+           liên tục quay, nên hướng "trục roller" (đáng lẽ cố định ~45° so với
+           khung xe) bị xoay theo từng vòng quay của bánh → lực ma sát hữu ích
+           trung bình về gần 0 sau mỗi vòng quay, bất kể chỉnh mu1/mu2/kp/kd/
+           slip thế nào (đã thử nhiều tổ hợp qua các đợt debug trước, xem git
+           log). Gazebo Sim (Ignition) có thuộc tính gz:expressed_in để ghim
+           fdir1 vào khung cố định, nhưng KHÔNG tồn tại ở Gazebo Classic đang
+           dùng ở đây.
+           Đổi sang ma sát đều mu1=mu2=1.0 (bỏ fdir1) — bánh lăn có độ bám
+           bình thường ở mọi hướng như bánh thường (kiểu skid-steer), tiến/
+           lùi/xoay tại chỗ hoạt động đúng vật lý. Đánh đổi - mất khả năng
+           trượt ngang tự do đúng kiểu roller mecanum thật (lệnh vy sẽ gây
+           trượt/xóc thay vì strafe mượt) — chấp nhận được vì controller
+           (PreferForwardCritic trong nav2_params.yaml) đã ưu tiên đi thẳng
+           hơn strafe. Muốn mô phỏng mecanum chính xác cần dựng lại mỗi bánh
+           bằng nhiều roller nhỏ tự quay quanh trục riêng (hình học thật). -->
+      <mu1>1.0</mu1>
       <mu2>1.0</mu2>
-      <fdir1>${fdir1}</fdir1>
       <kp>500000.0</kp>
       <kd>200.0</kd>
       <minDepth>0.001</minDepth>
@@ -108,15 +115,14 @@
     </gazebo>
   </xacro:macro>
 
-  <!-- FL/RR → +45°, FR/RL → -45° -->
   <xacro:mecanum_wheel prefix="front_left"
-    x_pos="${ wheel_sep_x/2}" y_pos="${ wheel_sep_y/2}" fdir1="0.707107  0.707107 0"/>
+    x_pos="${ wheel_sep_x/2}" y_pos="${ wheel_sep_y/2}"/>
   <xacro:mecanum_wheel prefix="front_right"
-    x_pos="${ wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}" fdir1="0.707107 -0.707107 0"/>
+    x_pos="${ wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}"/>
   <xacro:mecanum_wheel prefix="rear_left"
-    x_pos="${-wheel_sep_x/2}" y_pos="${ wheel_sep_y/2}" fdir1="0.707107 -0.707107 0"/>
+    x_pos="${-wheel_sep_x/2}" y_pos="${ wheel_sep_y/2}"/>
   <xacro:mecanum_wheel prefix="rear_right"
-    x_pos="${-wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}" fdir1="0.707107  0.707107 0"/>
+    x_pos="${-wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}"/>
 
   <!-- changelog mục A2 - ros2_control — thay thế planar_move, chuyển động
        thân xe là kết quả vật lý thật từ 4 khớp bánh, không phải lệnh set
