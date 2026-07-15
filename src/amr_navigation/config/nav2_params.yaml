@@ -125,15 +125,15 @@ controller_server:
       plugin: "nav2_mppi_controller::MPPIController"
       time_steps:   56
       model_dt:     0.05
-      batch_size:   2000
+      batch_size:   2500
       vx_std:       0.2
-      vy_std:       0.08
+      vy_std:       0.12
       wz_std:       0.4
-      vx_max:       0.50
-      vx_min:      -0.50
-      vy_max:       0.50
-      vy_min:      -0.50
-      wz_max:       1.3
+      vx_max:       0.75
+      vx_min:      -0.75
+      vy_max:       0.75
+      vy_min:      -0.75
+      wz_max:       2.0
       # TUNE: 1 -> 2 - MPPI hoi tu tot hon moi chu ky dieu khien, giam hien
       # tuong "luong lu"/dao dong quy dao o khu vuc chat hep (goc hep) ma khong
       # can tang batch_size.
@@ -172,7 +172,7 @@ controller_server:
         cost_power:  1
         cost_weight: 3.81
         critical_cost:     300.0
-        consider_footprint: false
+        consider_footprint: true
         collision_cost:    50000.0
         near_goal_distance: 1.0
       PathAlignCritic:
@@ -242,8 +242,8 @@ local_costmap:
         # dao di sat goc/tuong hon ma khong bi phat nang -> giam hien tuong xe
         # "ngan ngai"/dung khuu o goc hep. inflation_radius giu nguyen 0.35 de
         # bien an toan cung khong doi.
-        cost_scaling_factor: 10.0
-        inflation_radius:    0.35
+        cost_scaling_factor: 18.0
+        inflation_radius:    0.25
       always_send_full_costmap: true
 
 global_costmap:
@@ -278,8 +278,8 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         # TUNE: 15.0 -> 10.0 - dong bo voi local_costmap, cung ly do.
-        cost_scaling_factor: 10.0
-        inflation_radius:    0.35
+        cost_scaling_factor: 18.0
+        inflation_radius:    0.25
       always_send_full_costmap: true
 
 map_server:
@@ -350,10 +350,10 @@ velocity_smoother:
   ros__parameters:
     use_sim_time: true
     smoothing_frequency:  20.0
-    scale_velocities:     false
+    scale_velocities:     true
     feedback:             "OPEN_LOOP"
-    max_velocity:  [ 0.50,  0.50,  1.20]
-    min_velocity:  [-0.50, -0.50, -1.20]
+    max_velocity:  [ 0.75,  0.75,  2.0]
+    min_velocity:  [-0.75, -0.75, -2.0]
     max_accel:     [ 2.00,  2.00,  3.20]
     max_decel:     [-2.00, -2.00, -3.20]
     odom_topic:    "odom"
