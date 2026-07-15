@@ -54,7 +54,7 @@
   <gazebo reference="base_link"><material>Gazebo/Blue</material></gazebo>
 
   <!-- ── Mecanum Wheel Macro  -->
-  <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos fdir1">
+  <xacro:macro name="mecanum_wheel" params="prefix x_pos y_pos">
     <link name="${prefix}_wheel_link">
       <visual>
         <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
@@ -81,29 +81,90 @@
       <child  link="${prefix}_wheel_link"/>
       <origin xyz="${x_pos} ${y_pos} 0" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
-      <dynamics damping="0.005" friction="0.05"/>
+      <!-- changelog mục A5 - tăng damping/friction — mô phỏng lực cản ổ trục/hộp số thật -->
+      <dynamics damping="0.02" friction="0.15"/>
+      <!-- FIX (root cause thật của "xe đứng yên trong Gazebo dù RViz/odometry
+           vẫn tăng" — đối chiếu Notion mục 5 "lực truyền động không đủ"):
+           joint continuous KHÔNG có <limit> → gazebo_ros2_control
+           (default_robot_hw_sim, command_interface="velocity") sẽ set
+           fmax = 0 cho joint này trong ODE. Joint vẫn nhận lệnh vận tốc và
+           state_interface vẫn báo quay bình thường (nên odometry/TF/RViz vẫn
+           chạy), nhưng lực cho phép = 0 nên bánh không sinh được lực đẩy nào
+           lên khung xe → chassis không dịch chuyển. Đây là nguyên nhân nền,
+           độc lập với mu1/mu2/kp/kd đã chỉnh ở khối <gazebo> bên dưới.
+           velocity limit tính từ kinematics: (vx_max+vy_max+l*wz_max)/r
+           = (0.5+0.5+0.30*1.3)/0.075 ≈ 18.5 rad/s → đặt 20 rad/s biên an toàn.
+           effort 20 N·m đủ lớn so với joint friction 0.15 N·m ở trên. -->
+      <limit lower="-1e16" upper="1e16" effort="20.0" velocity="20.0"/>
     </joint>
     <gazebo reference="${prefix}_wheel_link">
-      <mu1>0.0</mu1>
+      <!-- FIX (bug - robot đứng yên trong Gazebo dù bánh quay đúng dấu/tốc độ,
+           odometry vẫn tăng bình thường) - kỹ thuật cũ mô phỏng roller mecanum
+           bằng 1 cylinder + fdir1 (mu1=0 dọc trục roller, mu2=1 vuông góc) có
+           lỗi nền tảng trong Gazebo Classic — fdir1 được tính trong hệ tọa độ
+           cục bộ của collision, mà collision này gắn trên continuous joint
+           liên tục quay, nên hướng "trục roller" (đáng lẽ cố định ~45° so với
+           khung xe) bị xoay theo từng vòng quay của bánh → lực ma sát hữu ích
+           trung bình về gần 0 sau mỗi vòng quay, bất kể chỉnh mu1/mu2/kp/kd/
+           slip thế nào (đã thử nhiều tổ hợp qua các đợt debug trước, xem git
+           log). Gazebo Sim (Ignition) có thuộc tính gz:expressed_in để ghim
+           fdir1 vào khung cố định, nhưng KHÔNG tồn tại ở Gazebo Classic đang
+           dùng ở đây.
+           Đổi sang ma sát đều mu1=mu2=1.0 (bỏ fdir1) — bánh lăn có độ bám
+           bình thường ở mọi hướng như bánh thường (kiểu skid-steer), tiến/
+           lùi/xoay tại chỗ hoạt động đúng vật lý. Đánh đổi - mất khả năng
+           trượt ngang tự do đúng kiểu roller mecanum thật (lệnh vy sẽ gây
+           trượt/xóc thay vì strafe mượt) — chấp nhận được vì controller
+           (PreferForwardCritic trong nav2_params.yaml) đã ưu tiên đi thẳng
+           hơn strafe. Muốn mô phỏng mecanum chính xác cần dựng lại mỗi bánh
+           bằng nhiều roller nhỏ tự quay quanh trục riêng (hình học thật). -->
+      <mu1>1.0</mu1>
       <mu2>1.0</mu2>
-      <fdir1>${fdir1}</fdir1>
-      <kp>1000000.0</kp>
-      <kd>100.0</kd>
+      <kp>500000.0</kp>
+      <kd>200.0</kd>
       <minDepth>0.001</minDepth>
       <maxVel>5.0</maxVel>
       <material>Gazebo/Black</material>
     </gazebo>
   </xacro:macro>
 
-  <!-- FL/RR → +45°, FR/RL → -45° -->
   <xacro:mecanum_wheel prefix="front_left"
-    x_pos="${ wheel_sep_x/2}" y_pos="${ wheel_sep_y/2}" fdir1="0.707107  0.707107 0"/>
+    x_pos="${ wheel_sep_x/2}" y_pos="${ wheel_sep_y/2}"/>
   <xacro:mecanum_wheel prefix="front_right"
-    x_pos="${ wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}" fdir1="0.707107 -0.707107 0"/>
+    x_pos="${ wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}"/>
   <xacro:mecanum_wheel prefix="rear_left"
-    x_pos="${-wheel_sep_x/2}" y_pos="${ wheel_sep_y/2}" fdir1="0.707107 -0.707107 0"/>
+    x_pos="${-wheel_sep_x/2}" y_pos="${ wheel_sep_y/2}"/>
   <xacro:mecanum_wheel prefix="rear_right"
-    x_pos="${-wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}" fdir1="0.707107  0.707107 0"/>
+    x_pos="${-wheel_sep_x/2}" y_pos="${-wheel_sep_y/2}"/>
+
+  <!-- changelog mục A2 - ros2_control — thay thế planar_move, chuyển động
+       thân xe là kết quả vật lý thật từ 4 khớp bánh, không phải lệnh set
+       velocity trực tiếp lên base_link -->
+  <ros2_control name="GazeboSystem" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+    <joint name="front_left_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="front_right_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="rear_left_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+    <joint name="rear_right_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
+  </ros2_control>
 
   <!-- ── LiDAR  -->
   <link name="lidar_link">
@@ -207,65 +268,25 @@
       </plugin>
     </sensor>
   </gazebo>
-  <!-- <gazebo reference="imu_link">
-    <sensor name="imu_sensor" type="imu">
-      <always_on>true</always_on>
-      <update_rate>100</update_rate>
-      <visualize>false</visualize>
-      <imu>
-        <angular_velocity>
-          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></x>
-          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></y>
-          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></z>
-        </angular_velocity>
-        <linear_acceleration>
-          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></x>
-          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></y>
-          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.005</stddev></noise></z>
-        </linear_acceleration>
-      </imu>
-      <plugin name="gazebo_ros_imu" filename="libgazebo_ros_imu_sensor.so">
-        <ros>
-          <remapping>~/out:=imu/data</remapping>
-        </ros>
-        <initial_orientation_as_reference>true</initial_orientation_as_reference>
-        <frame_name>imu_link</frame_name>
-      </plugin>
-    </sensor>
-  </gazebo> -->
+  <!-- FIX - đã xóa khối comment IMU chết (config noise cũ không dùng tới) -->
 
-  <!-- ══════════════════════════════════════════════════════════════════
-       HOLONOMIC PLANAR MOVE PLUGIN
-       ⚠️  Subscribe /cmd_vel_safe (NOT /cmd_vel)
-           → velocity đã được lọc bởi collision_warning_node
-       Publish /odom (TF map→odom handled by slam_toolbox/amcl)
-  ══════════════════════════════════════════════════════════════════ -->
+  <!-- FIX (changelog mục A1) - đã xóa plugin libgazebo_ros_planar_move —
+       không thể chạy song song với ros2_control (2 nguồn set velocity
+       thân xe sẽ xung đột vật lý). Chuyển động giờ đi qua mecanum_drive_controller
+       → 4 khớp bánh → vật lý Gazebo thật (xem mục A2 ở trên).
+
+       FIX (changelog mục A3, phần dọn dẹp) - đã xóa plugin
+       libgazebo_ros_joint_state_publisher — xung đột publisher /joint_states
+       với joint_state_broadcaster của ros2_control (cùng ghi 1 topic cho
+       cùng 4 khớp bánh, gây nhiễu dữ liệu joint state / giật TF bánh).
+       joint_state_broadcaster (spawn trong gazebo.launch.py, t=7s) đảm nhiệm
+       việc này thay thế. -->
   <gazebo>
-    <plugin name="planar_move" filename="libgazebo_ros_planar_move.so">
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <parameters>$(find amr_bringup)/config/mecanum_controllers.yaml</parameters>
       <ros>
-        <remapping>cmd_vel:=cmd_vel_safe</remapping>
-        <remapping>odom:=odom</remapping>
+        <remapping>/mecanum_drive_controller/tf_odometry:=/tf</remapping>
       </ros>
-      <update_rate>50.0</update_rate>
-      <robot_base_frame>base_footprint</robot_base_frame>
-      <odometry_frame>odom</odometry_frame>
-      <publish_odom>true</publish_odom>
-      <publish_odom_tf>true</publish_odom_tf>
-      <covariance_x>0.001</covariance_x>
-      <covariance_y>0.001</covariance_y>
-      <covariance_yaw>0.001</covariance_yaw>
-    </plugin>
-  </gazebo>
-
-  <!-- Joint state publisher — wheel joints → /joint_states -->
-  <gazebo>
-    <plugin name="joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
-      <ros><remapping>~/out:=joint_states</remapping></ros>
-      <update_rate>50</update_rate>
-      <joint_name>front_left_wheel_joint</joint_name>
-      <joint_name>front_right_wheel_joint</joint_name>
-      <joint_name>rear_left_wheel_joint</joint_name>
-      <joint_name>rear_right_wheel_joint</joint_name>
     </plugin>
   </gazebo>
 

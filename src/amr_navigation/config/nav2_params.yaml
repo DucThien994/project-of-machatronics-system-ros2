@@ -6,6 +6,18 @@ amcl:
     odom_frame_id:    "odom"
     global_frame_id:  "map"
     scan_topic:       scan
+    # FIX: robot luôn spawn tại (0,0,0) trong gazebo.launch.py (x_pose/y_pose/yaw
+    # mặc định = 0.0). Không set initial pose thì AMCL không publish map->odom TF
+    # cho đến khi người dùng tự bấm "2D Pose Estimate" trong RViz — trong lúc đó
+    # global_costmap/planner_server treo vô thời hạn chờ TF map->base_footprint
+    # (không lỗi, không log rõ ràng), khiến toàn bộ Nav2 trông như "không có gì"
+    # (không robot, không map) dù thực chất chỉ đang chờ pose ban đầu.
+    set_initial_pose: true
+    initial_pose:
+      x:   0.0
+      y:   0.0
+      z:   0.0
+      yaw: 0.0
     alpha1: 0.2
     alpha2: 0.2
     alpha3: 0.2
@@ -44,7 +56,8 @@ bt_navigator:
     use_sim_time: true
     global_frame:      map
     robot_base_frame:  base_footprint
-    odom_topic:        /odom
+    # FIX: /odom không còn tồn tại sau khi chuyển sang mecanum_drive_controller
+    odom_topic:        /mecanum_drive_controller/odometry
     bt_loop_duration:  10
     default_server_timeout: 20
     navigators: ['navigate_to_pose', 'navigate_through_poses']
@@ -97,6 +110,9 @@ controller_server:
   ros__parameters:
     use_sim_time: true
     controller_frequency: 20.0
+    # FIX: /odom không tồn tại (odometry thật ở mecanum_drive_controller) —
+    # thiếu dòng này khiến MPPIController luôn coi vận tốc hiện tại = 0.
+    odom_topic:        /mecanum_drive_controller/odometry
     min_x_velocity_threshold:     0.001
     min_y_velocity_threshold:     0.001
     min_theta_velocity_threshold: 0.001
@@ -287,7 +303,7 @@ planner_server:
     GridBased:
       plugin:        "nav2_navfn_planner/NavfnPlanner"
       tolerance:     0.5
-      use_astar:     false
+      use_astar:     true
       allow_unknown: true
 
 smoother_server:
@@ -340,7 +356,8 @@ velocity_smoother:
     min_velocity:  [-0.50, -0.50, -1.20]
     max_accel:     [ 2.00,  2.00,  3.20]
     max_decel:     [-2.00, -2.00, -3.20]
-    odom_topic:    "odom"
+    # FIX: /odom không còn tồn tại — dùng odometry thật từ mecanum_drive_controller
+    odom_topic:    "/mecanum_drive_controller/odometry"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout:   1.0
