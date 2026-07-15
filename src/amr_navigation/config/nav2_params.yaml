@@ -32,8 +32,10 @@ amcl:
     sigma_hit:            0.2
     tf_broadcast:         true
     transform_tolerance:  1.0
-    update_min_a:         0.1
-    update_min_d:         0.1
+    # TUNE: 0.1 -> 0.05 - cap nhat pose thuong xuyen hon (5.7 do / 5cm thay vi
+    # 11.4 do / 10cm) - tang do chinh xac dinh vi khi re gap o goc hep.
+    update_min_a:         0.05
+    update_min_d:         0.05
     z_hit:   0.5
     z_max:   0.05
     z_rand:  0.5
@@ -96,7 +98,10 @@ bt_navigator:
 controller_server:
   ros__parameters:
     use_sim_time: true
-    controller_frequency: 20.0
+    # TUNE: 20.0 -> 30.0 - rut ngan chu ky tinh lenh -> phan hoi nhanh hon.
+    # Neu CPU khong kham noi 30Hz x batch_size=2000 (log canh bao qua tai / xe
+    # giat), giam batch_size xuong 1500 de bu.
+    controller_frequency: 30.0
     min_x_velocity_threshold:     0.001
     min_y_velocity_threshold:     0.001
     min_theta_velocity_threshold: 0.001
@@ -129,7 +134,10 @@ controller_server:
       vy_max:       0.50
       vy_min:      -0.50
       wz_max:       1.3
-      iteration_count:    1
+      # TUNE: 1 -> 2 - MPPI hoi tu tot hon moi chu ky dieu khien, giam hien
+      # tuong "luong lu"/dao dong quy dao o khu vuc chat hep (goc hep) ma khong
+      # can tang batch_size.
+      iteration_count:    2
       prune_distance:     1.7
       transform_tolerance: 0.1
       temperature:  0.3
@@ -171,7 +179,10 @@ controller_server:
         enabled: true
         cost_power:  1
         cost_weight: 14.0
-        max_path_occupancy_ratio: 0.05
+        # TUNE: 0.05 -> 0.10 - noi long rang buoc bam sat path toan cuc (von
+        # roi rac hoa theo luoi NavFn/A*, khong muot qua goc) -> MPPI linh
+        # hoat "cat goc" hop ly hon khi qua khuc cua thay vi bi ep bam cung.
+        max_path_occupancy_ratio: 0.10
         trajectory_point_step:    3
         threshold_to_consider:    0.4
         offset_from_furthest:     20
@@ -227,7 +238,11 @@ local_costmap:
           obstacle_min_range:  0.12
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 15.0
+        # TUNE: 15.0 -> 10.0 - giam do doc cost quanh vat can, cho phep quy
+        # dao di sat goc/tuong hon ma khong bi phat nang -> giam hien tuong xe
+        # "ngan ngai"/dung khuu o goc hep. inflation_radius giu nguyen 0.35 de
+        # bien an toan cung khong doi.
+        cost_scaling_factor: 10.0
         inflation_radius:    0.35
       always_send_full_costmap: true
 
@@ -262,7 +277,8 @@ global_costmap:
           obstacle_min_range:  0.12
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 15.0
+        # TUNE: 15.0 -> 10.0 - dong bo voi local_costmap, cung ly do.
+        cost_scaling_factor: 10.0
         inflation_radius:    0.35
       always_send_full_costmap: true
 
