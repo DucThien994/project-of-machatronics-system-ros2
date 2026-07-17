@@ -108,7 +108,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        slam_arg, nav_arg, map_arg,
+        slam_arg, nav_arg, map_arg, keepout_mask_arg,
         x_pose_arg, y_pose_arg, yaw_arg,
         simulation,
         safety_launch,
