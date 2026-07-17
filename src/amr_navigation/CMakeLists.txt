@@ -14,4 +14,12 @@ install(PROGRAMS
   RENAME nav2_random_pose_test
 )
 
+# Tool benchmark 12 diem co dinh (nav2_12point_benchmark.py) - chay duoc qua:
+#   ros2 run amr_navigation nav2_12point_benchmark --output run1.csv
+install(PROGRAMS
+  scripts/nav2_12point_benchmark.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME nav2_12point_benchmark
+)
+
 ament_package()
