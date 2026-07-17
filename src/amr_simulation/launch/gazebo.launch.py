@@ -1,18 +1,5 @@
 #!/usr/bin/env python3
-"""
-gazebo.launch.py — Gazebo Classic + robot spawn (ver6.0, ros2_control thật)
-World: warehouse_v5.world (40×30m, multi-room, 8 pillars, 20+ obstacles)
 
-Pipeline cmd_vel:
-  teleop/Nav2 → /cmd_vel → collision_warning_node → /cmd_vel_safe
-  → (remap) /mecanum_drive_controller/reference_unstamped → mecanum_drive_controller
-  → 4x wheel_joint velocity command (gazebo_ros2_control)
-
-Thứ tự khởi động (tương đối, tính từ lúc gazebo.launch.py bắt đầu):
-  t=5.0s  spawn_entity (robot_description → Gazebo, kèm ros2_control + controller_manager)
-  t=7.0s  spawner joint_state_broadcaster
-  t=8.5s  spawner mecanum_drive_controller
-"""
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -26,7 +13,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, Command
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
-
 
 def generate_launch_description():
     pkg_desc = get_package_share_directory('amr_description')
