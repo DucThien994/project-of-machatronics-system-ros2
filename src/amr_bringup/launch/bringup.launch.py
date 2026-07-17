@@ -1,13 +1,11 @@
 """
 bringup.launch.py — ver5.0 top-level orchestration
+Kiến trúc: libgazebo_ros_planar_move (KHÔNG dùng ros2_control)
 Timeline:
   t=0s    → Gazebo + RSP + spawn robot (gazebo.launch.py)
-  t=5s    → spawn_entity hoàn tất (robot_description + controller_manager)
+  t=5s    → spawn_entity hoàn tất (planar_move plugin nhận /cmd_vel_safe)
   t=5s    → collision_warning_node (safety.launch.py)
-              Publish /cmd_vel_safe, remap sang
-              /mecanum_drive_controller/reference_unstamped
-  t=7s    → spawner joint_state_broadcaster (trong gazebo.launch.py)
-  t=8.5s  → spawner mecanum_drive_controller (trong gazebo.launch.py)
+              Publish /cmd_vel_safe → robot (remap trong URDF)
   t=12s   → slam_toolbox (chờ /scan ổn định)
   t=20s   → Nav2 (chờ map→odom TF từ SLAM)
 """
