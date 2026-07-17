@@ -10,7 +10,7 @@ from launch.actions import (
     TimerAction,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, Command
+from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -23,6 +23,11 @@ def generate_launch_description():
     y_pose_arg = DeclareLaunchArgument('y_pose', default_value='0.0')
     z_pose_arg = DeclareLaunchArgument('z_pose', default_value='0.10')
     yaw_arg    = DeclareLaunchArgument('yaw',    default_value='0.0')
+    # FIX: world mặc định đổi sang bản gấp đôi 32x48m (warehouse_v6_double).
+    # Muốn quay lại world cũ 16x24m: world:=warehouse_v5.world
+    world_arg  = DeclareLaunchArgument(
+        'world', default_value='warehouse_v6_double.world',
+        description="Tên file world trong amr_simulation/worlds/")
 
     gazebo_model_path = SetEnvironmentVariable(
         name='GAZEBO_MODEL_PATH',
@@ -37,7 +42,7 @@ def generate_launch_description():
         value=['/usr/share/gazebo-11', ':', os.environ.get('GAZEBO_RESOURCE_PATH', '')]
     )
 
-    world_file = os.path.join(pkg_sim, 'worlds', 'warehouse_v5.world')
+    world_file = PathJoinSubstitution([pkg_sim, 'worlds', LaunchConfiguration('world')])
     urdf_file  = os.path.join(pkg_desc, 'urdf', 'amr_robot.urdf.xacro')
 
     robot_desc = ParameterValue(Command(['xacro ', urdf_file]), value_type=str)
@@ -77,7 +82,7 @@ def generate_launch_description():
     return LaunchDescription([
         gazebo_model_path,
         gazebo_resource_path,
-        x_pose_arg, y_pose_arg, z_pose_arg, yaw_arg,
+        x_pose_arg, y_pose_arg, z_pose_arg, yaw_arg, world_arg,
         gazebo,
         rsp,
         spawn_robot,

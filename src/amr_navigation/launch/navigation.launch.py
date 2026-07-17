@@ -21,12 +21,20 @@ def generate_launch_description():
         description="Full path to map YAML. Bỏ trống = SLAM mode (dùng slam_toolbox).")
     declare_params = DeclareLaunchArgument(
         'params_file', default_value=default_params)
+    # FIX: KeepoutFilter — né vùng để hàng hóa. Bỏ trống (mặc định) = không
+    # bật keepout. Truyền path .yaml (do scripts/generate_keepout_mask.py
+    # tạo ra) để bật né vùng, hoạt động độc lập với SLAM/saved-map mode.
+    declare_keepout_mask = DeclareLaunchArgument(
+        'keepout_mask', default_value='',
+        description="Full path to keepout_mask.yaml. Bỏ trống = tắt KeepoutFilter.")
 
-    # ── Conditions 
+    # ── Conditions
     use_saved_map = PythonExpression(
         ["'", LaunchConfiguration('map'), "' != ''"])
     use_slam_map = PythonExpression(
         ["'", LaunchConfiguration('map'), "' == ''"])
+    use_keepout = PythonExpression(
+        ["'", LaunchConfiguration('keepout_mask'), "' != ''"])
 
     # ── Params rewrite 
     configured_params = RewrittenYaml(
@@ -90,6 +98,33 @@ def generate_launch_description():
             ('cmd_vel_smoothed', 'cmd_vel'),        # Xuất đầu ra chuẩn bị cho collision_warning_node
         ])
 
+    # FIX: KeepoutFilter — né vùng để hàng hóa. 2 node độc lập với SLAM/
+    # saved-map, chỉ chạy khi launch arg 'keepout_mask' khác rỗng.
+    filter_mask_server = Node(
+        package='nav2_map_server', executable='map_server',
+        name='filter_mask_server', output='screen',
+        condition=IfCondition(use_keepout),
+        parameters=[configured_params,
+                    {'yaml_filename': LaunchConfiguration('keepout_mask')}])
+
+    costmap_filter_info_server = Node(
+        package='nav2_map_server', executable='costmap_filter_info_server',
+        name='costmap_filter_info_server', output='screen',
+        condition=IfCondition(use_keepout),
+        parameters=[configured_params])
+
+    lifecycle_manager_costmap_filters = Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_costmap_filters',
+        output='screen',
+        condition=IfCondition(use_keepout),
+        parameters=[{
+            'use_sim_time': True,
+            'autostart': True,
+            'node_names': ['filter_mask_server', 'costmap_filter_info_server'],
+        }])
+
     # SLAM mode lifecycle: KHÔNG quản lý map_server/amcl
     lifecycle_manager_slam = Node(
         package='nav2_lifecycle_manager',
@@ -138,6 +173,7 @@ def generate_launch_description():
         declare_use_sim_time,
         declare_map,
         declare_params,
+        declare_keepout_mask,
         # Saved-map only
         map_server,
         amcl,
@@ -149,6 +185,10 @@ def generate_launch_description():
         bt_navigator,
         waypoint_follower,
         velocity_smoother,
+        # KeepoutFilter (chỉ khi keepout_mask != '')
+        filter_mask_server,
+        costmap_filter_info_server,
+        lifecycle_manager_costmap_filters,
         # Mode-specific lifecycle
         lifecycle_manager_slam,
         lifecycle_manager_saved,

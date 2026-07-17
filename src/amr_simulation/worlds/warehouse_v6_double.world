@@ -1,0 +1,553 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sdf version="1.6">
+  <world name="default">
+
+    <!--
+      warehouse_v6_double.world
+      World gap doi tu warehouse_v5.world (goc): dien tich x4 (moi truc x2).
+
+      CACH DUNG: WallB_01/GroundB_01 (asset AWS co san) la mesh CO DINH, khong
+      the "keo dai" duoc de gap doi phong ma khong co Gazebo de kiem tra truc
+      quan trong phien nay -> thay bang shell tuong/san PARAMETRIC (box don
+      gian, tu dinh nghia kich thuoc chinh xac 32m x 48m).
+
+      Phong goc (suy tu vi tri THUC TE cua toan bo prop trong warehouse_v5.world,
+      khong dung comment cu trong slam_params.yaml vi comment do khong khop du
+      lieu that): x in [-8,8] (16m), y in [-12,12] (24m), tam (0,0).
+      Phong moi (gap doi 2 truc theo yeu cau): x in [-16,16] (32m),
+      y in [-24,24] (48m).
+
+      Tat ca 23 model (shelf/cluttering/bucket/...) cua ban goc duoc TILE 4 ban
+      sao vao 4 goc phan tu, dich chuyen (dx,dy) = (+-8,+-12) - dung bang nua
+      kich thuoc phong goc nen 4 ban sao khop khit khong chong lan, khong ho.
+      Toa do noi bo tung cum giu nguyen y het ban goc (da kiem chung), chi
+      tinh tien ca cum.
+
+      8 vung keepout (2 cum/quadrant x 4 quadrant) danh dau bang tam nhua mong
+      mau vang-den (chi de HIEN THI, khong bat collision) mo phong theo dung
+      phong cach bang keo canh bao trong demo nav2_rosdevday_2021 - logic cam
+      di vao THAT su nam o Nav2 KeepoutFilter (costmap), khong phai o Gazebo.
+    -->
+
+    <gravity>0 0 -9.8</gravity>
+    <physics default="0" name="default_physics" type="ode">
+      <max_step_size>0.01</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>100</real_time_update_rate>
+    </physics>
+
+    <!-- ══════════════════════ SÀN (ground plane, 32x48m + margin) ══════ -->
+    <model name="warehouse_double_ground">
+      <static>true</static>
+      <link name="ground_link">
+        <collision name="ground_collision">
+          <geometry><box><size>33 49 0.1</size></box></geometry>
+          <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+        </collision>
+        <visual name="ground_visual">
+          <geometry><box><size>33 49 0.1</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+        </visual>
+        <pose>0 0 -0.05 0 0 0</pose>
+      </link>
+    </model>
+
+    <!-- ══════════════════════ TƯỜNG (shell 32m x 48m, cao 6m) ══════════ -->
+    <model name="warehouse_double_wall_south">
+      <static>true</static>
+      <link name="wall_link">
+        <collision name="c"><geometry><box><size>32.2 0.2 6</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>32.2 0.2 6</size></box></geometry>
+          <material><ambient>0.7 0.7 0.72 1</ambient><diffuse>0.75 0.75 0.78 1</diffuse></material>
+        </visual>
+      </link>
+      <pose>0 -24 3 0 0 0</pose>
+    </model>
+    <model name="warehouse_double_wall_north">
+      <static>true</static>
+      <link name="wall_link">
+        <collision name="c"><geometry><box><size>32.2 0.2 6</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>32.2 0.2 6</size></box></geometry>
+          <material><ambient>0.7 0.7 0.72 1</ambient><diffuse>0.75 0.75 0.78 1</diffuse></material>
+        </visual>
+      </link>
+      <pose>0 24 3 0 0 0</pose>
+    </model>
+    <model name="warehouse_double_wall_west">
+      <static>true</static>
+      <link name="wall_link">
+        <collision name="c"><geometry><box><size>0.2 48.2 6</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>0.2 48.2 6</size></box></geometry>
+          <material><ambient>0.7 0.7 0.72 1</ambient><diffuse>0.75 0.75 0.78 1</diffuse></material>
+        </visual>
+      </link>
+      <pose>-16 0 3 0 0 0</pose>
+    </model>
+    <model name="warehouse_double_wall_east">
+      <static>true</static>
+      <link name="wall_link">
+        <collision name="c"><geometry><box><size>0.2 48.2 6</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>0.2 48.2 6</size></box></geometry>
+          <material><ambient>0.7 0.7 0.72 1</ambient><diffuse>0.75 0.75 0.78 1</diffuse></material>
+        </visual>
+      </link>
+      <pose>16 0 3 0 0 0</pose>
+    </model>
+
+    <!-- ══════════════════════ QUADRANT Q1 (dx=-8, dy=-12) ══════════════ -->
+    <model name="aws_robomaker_warehouse_ShelfF_01_001_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ShelfF_01</uri></include>
+      <pose frame="">-13.795143 -12.956635 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_001_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">-3.26844 -11.42057 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_002_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">-3.26844 -16.827049 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_003_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">-3.26844 -20.6651 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_001_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">-3.26844 -13.242668 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_002_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">-3.26844 -15.038551 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_003_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">-3.26844 -18.750542 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Lamp_01_Q1">
+      <include><uri>model://aws_robomaker_warehouse_Lamp_01</uri></include>
+      <pose frame="">-8 -12 -4 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_020_Q1">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">-7.566551 -2.368294 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_021_Q1">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">-9.8321 -18.3752 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_022_Q1">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">-7.566551 -3.41 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_016_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">-2.291862 -3.383156 -0.017477 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_017_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">-4.591362 -3.383156 -0.017477 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_018_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">-9.491287 -6.777565 -0.017477 0 0 -1.583185</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_027_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-4.675041 -8.177551 -0.012064 0 0 1.563871</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_028_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-2.45829 -8.183525 -0.015663 0 0 -1.583191</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_029_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-2.615761 -5.862846 0 0 0 3.150000</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_030_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-4.764 -5.862846 0 0 0 3.150000</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_031_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-9.573677 -9.698006 -0.015663 0 0 -3.133191</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_032_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-9.2196 -2.593 -0.015663 0 0 1.563871</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringD_01_005_Q1">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringD_01</uri></include>
+      <pose frame="">-9.634682 -19.811813 -0.319559 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_002_Q1">
+      <include><uri>model://aws_robomaker_warehouse_TrashCanC_01</uri></include>
+      <pose frame="">-9.592441 -4.28458 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_PalletJackB_01_001_Q1">
+      <include><uri>model://aws_robomaker_warehouse_PalletJackB_01</uri></include>
+      <pose frame="">-8.276098 -21.481944 0.023266 0 0 0</pose>
+    </model>
+
+    <!-- ══════════════════════ QUADRANT Q2 (dx=-8, dy=+12) ══════════════ -->
+    <model name="aws_robomaker_warehouse_ShelfF_01_001_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ShelfF_01</uri></include>
+      <pose frame="">-13.795143 11.043365 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_001_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">-3.26844 12.57943 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_002_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">-3.26844 7.172951 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_003_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">-3.26844 3.3349 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_001_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">-3.26844 10.757332 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_002_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">-3.26844 8.961449 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_003_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">-3.26844 5.249458 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Lamp_01_Q2">
+      <include><uri>model://aws_robomaker_warehouse_Lamp_01</uri></include>
+      <pose frame="">-8 12 -4 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_020_Q2">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">-7.566551 21.631706 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_021_Q2">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">-9.8321 5.6248 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_022_Q2">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">-7.566551 20.59 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_016_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">-2.291862 20.616844 -0.017477 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_017_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">-4.591362 20.616844 -0.017477 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_018_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">-9.491287 17.222435 -0.017477 0 0 -1.583185</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_027_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-4.675041 15.822449 -0.012064 0 0 1.563871</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_028_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-2.45829 15.816475 -0.015663 0 0 -1.583191</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_029_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-2.615761 18.137154 0 0 0 3.150000</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_030_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-4.764 18.137154 0 0 0 3.150000</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_031_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-9.573677 14.301994 -0.015663 0 0 -3.133191</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_032_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">-9.2196 21.407 -0.015663 0 0 1.563871</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringD_01_005_Q2">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringD_01</uri></include>
+      <pose frame="">-9.634682 4.188187 -0.319559 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_002_Q2">
+      <include><uri>model://aws_robomaker_warehouse_TrashCanC_01</uri></include>
+      <pose frame="">-9.592441 19.71542 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_PalletJackB_01_001_Q2">
+      <include><uri>model://aws_robomaker_warehouse_PalletJackB_01</uri></include>
+      <pose frame="">-8.276098 2.518056 0.023266 0 0 0</pose>
+    </model>
+
+    <!-- ══════════════════════ QUADRANT Q3 (dx=+8, dy=-12) ══════════════ -->
+    <model name="aws_robomaker_warehouse_ShelfF_01_001_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ShelfF_01</uri></include>
+      <pose frame="">2.204857 -12.956635 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_001_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">12.73156 -11.42057 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_002_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">12.73156 -16.827049 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_003_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">12.73156 -20.6651 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_001_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">12.73156 -13.242668 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_002_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">12.73156 -15.038551 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_003_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">12.73156 -18.750542 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Lamp_01_Q3">
+      <include><uri>model://aws_robomaker_warehouse_Lamp_01</uri></include>
+      <pose frame="">8 -12 -4 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_020_Q3">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">8.433449 -2.368294 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_021_Q3">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">6.1679 -18.3752 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_022_Q3">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">8.433449 -3.41 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_016_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">13.708138 -3.383156 -0.017477 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_017_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">11.408638 -3.383156 -0.017477 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_018_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">6.508713 -6.777565 -0.017477 0 0 -1.583185</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_027_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">11.324959 -8.177551 -0.012064 0 0 1.563871</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_028_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">13.54171 -8.183525 -0.015663 0 0 -1.583191</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_029_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">13.384239 -5.862846 0 0 0 3.150000</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_030_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">11.236 -5.862846 0 0 0 3.150000</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_031_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">6.426323 -9.698006 -0.015663 0 0 -3.133191</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_032_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">6.7804 -2.593 -0.015663 0 0 1.563871</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringD_01_005_Q3">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringD_01</uri></include>
+      <pose frame="">6.365318 -19.811813 -0.319559 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_002_Q3">
+      <include><uri>model://aws_robomaker_warehouse_TrashCanC_01</uri></include>
+      <pose frame="">6.407559 -4.28458 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_PalletJackB_01_001_Q3">
+      <include><uri>model://aws_robomaker_warehouse_PalletJackB_01</uri></include>
+      <pose frame="">7.723902 -21.481944 0.023266 0 0 0</pose>
+    </model>
+
+    <!-- ══════════════════════ QUADRANT Q4 (dx=+8, dy=+12) ══════════════ -->
+    <model name="aws_robomaker_warehouse_ShelfF_01_001_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ShelfF_01</uri></include>
+      <pose frame="">2.204857 11.043365 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_001_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">12.73156 12.57943 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_002_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">12.73156 7.172951 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfE_01_003_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ShelfE_01</uri></include>
+      <pose frame="">12.73156 3.3349 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_001_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">12.73156 10.757332 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_002_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">12.73156 8.961449 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfD_01_003_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ShelfD_01</uri></include>
+      <pose frame="">12.73156 5.249458 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Lamp_01_Q4">
+      <include><uri>model://aws_robomaker_warehouse_Lamp_01</uri></include>
+      <pose frame="">8 12 -4 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_020_Q4">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">8.433449 21.631706 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_021_Q4">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">6.1679 5.6248 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_Bucket_01_022_Q4">
+      <include><uri>model://aws_robomaker_warehouse_Bucket_01</uri></include>
+      <pose frame="">8.433449 20.59 0 0 0 -1.563161</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_016_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">13.708138 20.616844 -0.017477 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_017_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">11.408638 20.616844 -0.017477 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringA_01_018_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringA_01</uri></include>
+      <pose frame="">6.508713 17.222435 -0.017477 0 0 -1.583185</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_027_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">11.324959 15.822449 -0.012064 0 0 1.563871</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_028_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">13.54171 15.816475 -0.015663 0 0 -1.583191</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_029_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">13.384239 18.137154 0 0 0 3.150000</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_030_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">11.236 18.137154 0 0 0 3.150000</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_031_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">6.426323 14.301994 -0.015663 0 0 -3.133191</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringC_01_032_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringC_01</uri></include>
+      <pose frame="">6.7804 21.407 -0.015663 0 0 1.563871</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringD_01_005_Q4">
+      <include><uri>model://aws_robomaker_warehouse_ClutteringD_01</uri></include>
+      <pose frame="">6.365318 4.188187 -0.319559 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_002_Q4">
+      <include><uri>model://aws_robomaker_warehouse_TrashCanC_01</uri></include>
+      <pose frame="">6.407559 19.71542 0 0 0 0</pose>
+    </model>
+    <model name="aws_robomaker_warehouse_PalletJackB_01_001_Q4">
+      <include><uri>model://aws_robomaker_warehouse_PalletJackB_01</uri></include>
+      <pose frame="">7.723902 2.518056 0.023266 0 0 0</pose>
+    </model>
+
+    <!-- ══════════════════ 8 vùng keepout (chỉ hiển thị, không collision) ══
+         Tam nhua mong mau vang-den mo phong bang canh bao (giong demo 2021),
+         danh dau vung "de hang hoa" quanh moi cum ke (ShelfF va cum ShelfE/D).
+         Toa do khop CHINH XAC voi rectangle da dinh nghia cho keepout_mask
+         (xem scripts/generate_keepout_mask.py). -->
+    <model name="keepout_zone_shelfF_Q1"><static>true</static>
+      <link name="l"><visual name="v"><geometry><box><size>2.5 2.5 0.02</size></box></geometry>
+      <material><ambient>0.9 0.75 0 0.7</ambient><diffuse>0.9 0.75 0 0.7</diffuse></material></visual></link>
+      <pose>-13.795143 -12.956635 0.01 0 0 0</pose></model>
+    <model name="keepout_zone_shelfF_Q2"><static>true</static>
+      <link name="l"><visual name="v"><geometry><box><size>2.5 2.5 0.02</size></box></geometry>
+      <material><ambient>0.9 0.75 0 0.7</ambient><diffuse>0.9 0.75 0 0.7</diffuse></material></visual></link>
+      <pose>-13.795143 11.043365 0.01 0 0 0</pose></model>
+    <model name="keepout_zone_shelfF_Q3"><static>true</static>
+      <link name="l"><visual name="v"><geometry><box><size>2.5 2.5 0.02</size></box></geometry>
+      <material><ambient>0.9 0.75 0 0.7</ambient><diffuse>0.9 0.75 0 0.7</diffuse></material></visual></link>
+      <pose>2.204857 -12.956635 0.01 0 0 0</pose></model>
+    <model name="keepout_zone_shelfF_Q4"><static>true</static>
+      <link name="l"><visual name="v"><geometry><box><size>2.5 2.5 0.02</size></box></geometry>
+      <material><ambient>0.9 0.75 0 0.7</ambient><diffuse>0.9 0.75 0 0.7</diffuse></material></visual></link>
+      <pose>2.204857 11.043365 0.01 0 0 0</pose></model>
+    <model name="keepout_zone_shelfED_Q1"><static>true</static>
+      <link name="l"><visual name="v"><geometry><box><size>3.1 11.3 0.02</size></box></geometry>
+      <material><ambient>0.9 0.75 0 0.7</ambient><diffuse>0.9 0.75 0 0.7</diffuse></material></visual></link>
+      <pose>-3.25 -16.05 0.01 0 0 0</pose></model>
+    <model name="keepout_zone_shelfED_Q2"><static>true</static>
+      <link name="l"><visual name="v"><geometry><box><size>3.1 11.3 0.02</size></box></geometry>
+      <material><ambient>0.9 0.75 0 0.7</ambient><diffuse>0.9 0.75 0 0.7</diffuse></material></visual></link>
+      <pose>-3.25 7.95 0.01 0 0 0</pose></model>
+    <model name="keepout_zone_shelfED_Q3"><static>true</static>
+      <link name="l"><visual name="v"><geometry><box><size>3.1 11.3 0.02</size></box></geometry>
+      <material><ambient>0.9 0.75 0 0.7</ambient><diffuse>0.9 0.75 0 0.7</diffuse></material></visual></link>
+      <pose>12.75 -16.05 0.01 0 0 0</pose></model>
+    <model name="keepout_zone_shelfED_Q4"><static>true</static>
+      <link name="l"><visual name="v"><geometry><box><size>3.1 11.3 0.02</size></box></geometry>
+      <material><ambient>0.9 0.75 0 0.7</ambient><diffuse>0.9 0.75 0 0.7</diffuse></material></visual></link>
+      <pose>12.75 7.95 0.01 0 0 0</pose></model>
+
+    <!-- ══════════════════════ Đèn trần (1 đèn/quadrant) ════════════════ -->
+    <light name="Warehouse_CeilingLight_Q1" type="point">
+      <pose frame="">-8 -12 5.8 0 0 0</pose>
+      <diffuse>0.5 0.5 0.5 1</diffuse><specular>0.2 0.2 0.2 1</specular>
+      <attenuation><range>80</range><constant>0.3</constant><linear>0.01</linear><quadratic>0.001</quadratic></attenuation>
+      <cast_shadows>1</cast_shadows><direction>0.1 0.1 -1</direction>
+    </light>
+    <light name="Warehouse_CeilingLight_Q2" type="point">
+      <pose frame="">-8 12 5.8 0 0 0</pose>
+      <diffuse>0.5 0.5 0.5 1</diffuse><specular>0.2 0.2 0.2 1</specular>
+      <attenuation><range>80</range><constant>0.3</constant><linear>0.01</linear><quadratic>0.001</quadratic></attenuation>
+      <cast_shadows>1</cast_shadows><direction>0.1 0.1 -1</direction>
+    </light>
+    <light name="Warehouse_CeilingLight_Q3" type="point">
+      <pose frame="">8 -12 5.8 0 0 0</pose>
+      <diffuse>0.5 0.5 0.5 1</diffuse><specular>0.2 0.2 0.2 1</specular>
+      <attenuation><range>80</range><constant>0.3</constant><linear>0.01</linear><quadratic>0.001</quadratic></attenuation>
+      <cast_shadows>1</cast_shadows><direction>0.1 0.1 -1</direction>
+    </light>
+    <light name="Warehouse_CeilingLight_Q4" type="point">
+      <pose frame="">8 12 5.8 0 0 0</pose>
+      <diffuse>0.5 0.5 0.5 1</diffuse><specular>0.2 0.2 0.2 1</specular>
+      <attenuation><range>80</range><constant>0.3</constant><linear>0.01</linear><quadratic>0.001</quadratic></attenuation>
+      <cast_shadows>1</cast_shadows><direction>0.1 0.1 -1</direction>
+    </light>
+
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose frame=''>-10 20 26 -0 0.921795 -1.12701</pose>
+        <view_controller>orbit</view_controller>
+        <projection_type>perspective</projection_type>
+      </camera>
+    </gui>
+
+  </world>
+</sdf>

@@ -1,15 +1,12 @@
-# slam_params.yaml — ver5.0 (optimized for 24×18m world)
+# slam_params.yaml — ver5.0 (optimized cho world warehouse_v6_double, 32×48m)
 #
-# Các thay đổi so với ver cũ:
-#   minimum_time_interval: 0.5 → 0.2   (5 scan/s thay vì 2 scan/s)
-#   minimum_travel_distance: 0.5 → 0.2  (update khi di 20cm, không phải 50cm)
-#   minimum_travel_heading: 0.5 → 0.2   (update khi xoay 11°, không phải 28°)
-#   map_update_interval: 1.0 → 0.3      (map refresh 3x/s thay vì 1x/s)
-#   map_size: 60.0 → 30.0               (phù hợp world 24×18m, diagonal=30m)
-#   map_start_x/y: -30 → -13/-10        (tight bound, không lãng phí vùng trống)
-#   scan_buffer_maximum_scan_distance: 10→12  (dùng full LiDAR range)
-#   scan_buffer_size: 10 → 20           (buffer nhiều scan hơn)
-#   loop_match_maximum_variance: 15 → 3  (loop closure chính xác hơn)
+# FIX (world gấp đôi 2 trục, dùng cho warehouse_v6_double.world):
+#   map_size:     32.0 → 65.0   (bao phủ đường chéo sqrt(32²+48²)=57.7m + margin)
+#   map_start_x: -13.0 → -17.0  (x=-16 tường ngoài + 1m margin)
+#   map_start_y:  -9.0 → -25.0  (y=-24 tường ngoài + 1m margin)
+# Các tham số update-frequency/scan-buffer/loop-closure giữ nguyên vì phụ
+# thuộc phần cứng LiDAR (30Hz, range 12m) và CPU, không phụ thuộc kích thước
+# world.
 
 slam_toolbox:
   ros__parameters:
@@ -30,11 +27,11 @@ slam_toolbox:
     scan_topic:  /scan
     mode:        mapping
 
-    # ── Map settings — world 24×16m (asymmetric, scaled ×1.333) ──
+    # ── Map settings — world warehouse_v6_double: 32×48m (gấp đôi 2 trục) ──
     map_resolution:  0.05
-    map_size:        32.0       # covers diagonal sqrt(24²+16²)=28.8m + 3.2m margin
-    map_start_x:    -13.0       # x=-12 outer wall + 1m margin
-    map_start_y:    -9.0        # y=-8 outer wall + 1m margin
+    map_size:        65.0       # covers diagonal sqrt(32²+48²)=57.7m + ~7.3m margin
+    map_start_x:    -17.0       # x=-16 tường ngoài + 1m margin
+    map_start_y:    -25.0       # y=-24 tường ngoài + 1m margin
 
     # ── Update frequency (Ryzen 7840H + LiDAR 30Hz) ──────────────────
     # LiDAR 30Hz → minimum_time_interval=0.05 → 20 scan/giây được xử lý

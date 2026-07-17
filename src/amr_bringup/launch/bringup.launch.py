@@ -1,14 +1,3 @@
-"""
-bringup.launch.py — ver5.0 top-level orchestration
-Kiến trúc: libgazebo_ros_planar_move (KHÔNG dùng ros2_control)
-Timeline:
-  t=0s    → Gazebo + RSP + spawn robot (gazebo.launch.py)
-  t=5s    → spawn_entity hoàn tất (planar_move plugin nhận /cmd_vel_safe)
-  t=5s    → collision_warning_node (safety.launch.py)
-              Publish /cmd_vel_safe → robot (remap trong URDF)
-  t=12s   → slam_toolbox (chờ /scan ổn định)
-  t=20s   → Nav2 (chờ map→odom TF từ SLAM)
-"""
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -43,6 +32,11 @@ def generate_launch_description():
         'map', default_value='',
         description="Path to saved map YAML. Bỏ trống (mặc định) = SLAM mode, "
                     "Nav2 dùng map từ slam_toolbox.")
+    # FIX: né vùng để hàng hóa (KeepoutFilter) — bỏ trống = tắt.
+    keepout_mask_arg = DeclareLaunchArgument(
+        'keepout_mask', default_value='',
+        description="Path to keepout_mask.yaml (tạo bằng "
+                    "scripts/generate_keepout_mask.py). Bỏ trống = tắt né vùng.")
     x_pose_arg = DeclareLaunchArgument('x_pose', default_value='0.0')
     y_pose_arg = DeclareLaunchArgument('y_pose', default_value='0.0')
     yaw_arg    = DeclareLaunchArgument('yaw',    default_value='0.0')
@@ -101,6 +95,7 @@ def generate_launch_description():
                         launch_arguments={
                             'use_sim_time': 'true',
                             'map':          LaunchConfiguration('map'),
+                            'keepout_mask': LaunchConfiguration('keepout_mask'),
                             # FIX: pass params_file tường minh để tránh xung đột
                             # với argument cùng tên trong slam.launch.py
                             'params_file':  nav2_params_file,
