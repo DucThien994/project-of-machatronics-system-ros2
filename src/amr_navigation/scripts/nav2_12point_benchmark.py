@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
 """
-nav2_12point_benchmark.py — Gửi robot tới 12 điểm CỐ ĐỊNH (không random) trải
-đều 4 quadrant của warehouse_v6_double (32x48m), đo sai số x, y, yaw và
-quaternion w giữa goal và vị trí cuối cùng thực tế.
+nav2_12point_benchmark.py — Gửi robot tới 12 điểm NGẪU NHIÊN (vị trí lẫn góc
+quay random mỗi lần chạy) trong warehouse_v6_double (32x48m), đo sai số x, y,
+yaw và quaternion w giữa goal và vị trí cuối cùng thực tế.
 
-TẠI SAO 12 ĐIỂM CỐ ĐỊNH (không phải random như nav2_random_pose_test.py):
-Mục đích ở đây là SO SÁNH giữa các lần tune tham số khác nhau (VD trước/sau
-khi đổi cost_scaling_factor, hoặc trước/sau khi bật KeepoutFilter) — nếu mỗi
-lần test một bộ điểm khác nhau thì không so sánh công bằng được. 12 điểm bên
-dưới đã tính toán tránh xa 8 vùng keepout (xem generate_keepout_mask.py) và
-tránh mép tường >=1.5m, y hệt mỗi lần chạy.
+FIX (theo yêu cầu): trước đây dùng 12 điểm cố định để so sánh công bằng giữa
+các lần tune — nay đổi lại thành random thật (x, y, yaw đều random mỗi lần),
+nhưng vẫn đảm bảo:
+  - Tránh xa 8 vùng keepout (quanh ShelfF/ShelfE/ShelfD) với margin lớn hơn
+    nhiều so với bán kính vật lý của vùng đó (--keepout-margin, mặc định
+    1.5m) — vì xe khó luồn lách khi goal ở sát rìa kệ hàng (đường đi hẹp,
+    MPPI dễ dao động/mất tốc độ ở đó).
+  - Tránh sát tường (--wall-margin, mặc định 1.5m).
+  - Các điểm không bắt buộc gần nhau, có thể cách xa tùy random, chỉ ép tối
+    thiểu --min-separation (mặc định 2.0m) để không ra 2 điểm trùng nhau.
 
 Cách chạy (sau khi bringup.launch.py + Nav2 đã active):
     ros2 run amr_navigation nav2_12point_benchmark --output run1.csv
-
-Muốn đổi danh sách điểm: sửa trực tiếp GOAL_POINTS bên dưới.
+    ros2 run amr_navigation nav2_12point_benchmark --seed 42   # lặp lại được
 """
 import argparse
 import csv
 import math
+import random
 import sys
 import time
 
@@ -31,22 +35,49 @@ from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
 import tf2_ros
 
-# 12 điểm cố định (label, x, y, yaw_deg) — trải đều 3 điểm/quadrant, đã kiểm
-# tra tránh 8 vùng keepout (margin >=0.5m) và tránh tường (margin >=1.5m).
-GOAL_POINTS = [
-    ("Q1_center",  -8.0,  -4.0,    0.0),
-    ("Q1_far",     -1.0, -20.0,   90.0),
-    ("Q1_corner", -11.0,  -8.0,  180.0),
-    ("Q2_center",  -8.0,   4.0,    0.0),
-    ("Q2_far",     -1.0,  20.0,  -90.0),
-    ("Q2_corner", -11.0,   8.0,   45.0),
-    ("Q3_center",   8.0,  -4.0,  180.0),
-    ("Q3_far",      1.0, -20.0,  -90.0),
-    ("Q3_corner",  10.0,  -8.0,   90.0),
-    ("Q4_center",   8.0,   4.0,   90.0),
-    ("Q4_far",      1.0,  20.0,    0.0),
-    ("Q4_corner",  10.0,   8.0, -135.0),
+# Biên phòng (world warehouse_v6_double.world): x in [-16,16], y in [-24,24].
+ROOM_X = (-16.0, 16.0)
+ROOM_Y = (-24.0, 24.0)
+
+# 8 vùng keepout (center_x, center_y, width, height) — khớp CHÍNH XÁC với
+# KEEPOUT_ZONES trong generate_keepout_mask.py và 8 model "keepout_zone_*"
+# trong warehouse_v6_double.world.
+KEEPOUT_ZONES = [
+    (-13.795143, -12.956635, 2.5, 2.5),
+    (-13.795143,  11.043365, 2.5, 2.5),
+    (  2.204857, -12.956635, 2.5, 2.5),
+    (  2.204857,  11.043365, 2.5, 2.5),
+    ( -3.25,     -16.05,     3.1, 11.3),
+    ( -3.25,       7.95,     3.1, 11.3),
+    ( 12.75,     -16.05,     3.1, 11.3),
+    ( 12.75,       7.95,     3.1, 11.3),
 ]
+
+
+def too_close_to_keepout(x, y, margin):
+    for cx, cy, w, h in KEEPOUT_ZONES:
+        half_w, half_h = w / 2.0 + margin, h / 2.0 + margin
+        if (cx - half_w) <= x <= (cx + half_w) and (cy - half_h) <= y <= (cy + half_h):
+            return True
+    return False
+
+
+def sample_random_pose(rng, existing, wall_margin, keepout_margin, min_sep, max_attempts=2000):
+    x_lo, x_hi = ROOM_X[0] + wall_margin, ROOM_X[1] - wall_margin
+    y_lo, y_hi = ROOM_Y[0] + wall_margin, ROOM_Y[1] - wall_margin
+    for _ in range(max_attempts):
+        x = rng.uniform(x_lo, x_hi)
+        y = rng.uniform(y_lo, y_hi)
+        if too_close_to_keepout(x, y, keepout_margin):
+            continue
+        if any(math.hypot(x - ex, y - ey) < min_sep for ex, ey in existing):
+            continue
+        yaw_deg = rng.uniform(-180.0, 180.0)
+        return x, y, yaw_deg
+    raise RuntimeError(
+        "Không tìm được điểm random hợp lệ sau nhiều lần thử — "
+        "wall_margin/keepout_margin/min_separation đang đặt quá lớn so với "
+        "diện tích phòng còn trống.")
 
 
 def yaw_to_quat(yaw_deg):
@@ -61,6 +92,15 @@ def quat_to_yaw_deg(z, w):
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument('--n-points', type=int, default=12, help="Số điểm random (mặc định 12)")
+    p.add_argument('--seed', type=int, default=None,
+                   help="Seed random — đặt số cụ thể để lặp lại đúng bộ điểm cũ")
+    p.add_argument('--wall-margin', type=float, default=1.5,
+                   help="Khoảng cách tối thiểu tới tường (m)")
+    p.add_argument('--keepout-margin', type=float, default=1.5,
+                   help="Khoảng cách tối thiểu tới rìa vùng keepout/kiện hàng (m)")
+    p.add_argument('--min-separation', type=float, default=2.0,
+                   help="Khoảng cách tối thiểu giữa 2 điểm goal (m)")
     p.add_argument('--timeout', type=float, default=100.0, help="Giây/điểm (mặc định 100s)")
     p.add_argument('--settle-time', type=float, default=1.5,
                    help="Chờ ổn định TF sau khi goal SUCCEEDED trước khi đo (s)")
@@ -148,7 +188,22 @@ class TwelvePointBenchmark(Node):
                       'error_w', 'duration_sec', 'status']
         rows = []
 
-        for label, x, y, yaw_deg in GOAL_POINTS:
+        rng = random.Random(self.args.seed)
+        seed_used = self.args.seed if self.args.seed is not None else 'None (fully random)'
+        self.get_logger().info(f"Sinh {self.args.n_points} điểm random (seed={seed_used})...")
+
+        existing = []
+        goal_points = []
+        for i in range(self.args.n_points):
+            x, y, yaw_deg = sample_random_pose(
+                rng, existing, self.args.wall_margin,
+                self.args.keepout_margin, self.args.min_separation)
+            existing.append((x, y))
+            goal_points.append((f"P{i+1}", round(x, 3), round(y, 3), round(yaw_deg, 1)))
+            self.get_logger().info(
+                f"  P{i+1}: x={x:.2f} y={y:.2f} yaw={yaw_deg:.1f}deg")
+
+        for label, x, y, yaw_deg in goal_points:
             self.get_logger().info(f"--- Goal '{label}': ({x},{y}, yaw={yaw_deg} deg) ---")
             goal_qz, goal_qw = yaw_to_quat(yaw_deg)
             status, final_pose, elapsed = self.send_goal_and_wait(x, y, yaw_deg)
