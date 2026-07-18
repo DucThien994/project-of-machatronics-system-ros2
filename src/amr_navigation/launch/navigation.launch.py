@@ -13,7 +13,6 @@ def generate_launch_description():
     pkg_nav = get_package_share_directory('amr_navigation')
     default_params = os.path.join(pkg_nav, 'config', 'nav2_params.yaml')
 
-    # Launch arguments
     declare_use_sim_time = DeclareLaunchArgument(
         'use_sim_time', default_value='true')
     declare_map = DeclareLaunchArgument(
@@ -21,9 +20,6 @@ def generate_launch_description():
         description="Full path to map YAML. Bỏ trống = SLAM mode (dùng slam_toolbox).")
     declare_params = DeclareLaunchArgument(
         'params_file', default_value=default_params)
-    # FIX: KeepoutFilter — né vùng để hàng hóa. Bỏ trống (mặc định) = không
-    # bật keepout. Truyền path .yaml (do scripts/generate_keepout_mask.py
-    # tạo ra) để bật né vùng, hoạt động độc lập với SLAM/saved-map mode.
     declare_keepout_mask = DeclareLaunchArgument(
         'keepout_mask', default_value='',
         description="Full path to keepout_mask.yaml. Bỏ trống = tắt KeepoutFilter.")
@@ -36,7 +32,6 @@ def generate_launch_description():
     use_keepout = PythonExpression(
         ["'", LaunchConfiguration('keepout_mask'), "' != ''"])
 
-    # ── Params rewrite 
     configured_params = RewrittenYaml(
         source_file=LaunchConfiguration('params_file'),
         param_rewrites={'use_sim_time': 'true'},
@@ -55,7 +50,6 @@ def generate_launch_description():
         condition=IfCondition(use_saved_map),
         parameters=[configured_params])
 
-    # luon khoi dong nav2
     # Nav2 publish /cmd_vel → collision_warning_node → /cmd_vel_safe → robot
     controller_server = Node(
         package='nav2_controller', executable='controller_server',
@@ -94,12 +88,10 @@ def generate_launch_description():
         name='velocity_smoother', output='screen',
         parameters=[configured_params],
         remappings=[
-            ('cmd_vel', 'cmd_vel_nav'),             # Nhận đầu vào từ controller và behavior
-            ('cmd_vel_smoothed', 'cmd_vel'),        # Xuất đầu ra chuẩn bị cho collision_warning_node
+            ('cmd_vel', 'cmd_vel_nav'),             
+            ('cmd_vel_smoothed', 'cmd_vel'),        
         ])
 
-    # FIX: KeepoutFilter — né vùng để hàng hóa. 2 node độc lập với SLAM/
-    # saved-map, chỉ chạy khi launch arg 'keepout_mask' khác rỗng.
     filter_mask_server = Node(
         package='nav2_map_server', executable='map_server',
         name='filter_mask_server', output='screen',
@@ -125,7 +117,6 @@ def generate_launch_description():
             'node_names': ['filter_mask_server', 'costmap_filter_info_server'],
         }])
 
-    # SLAM mode lifecycle: KHÔNG quản lý map_server/amcl
     lifecycle_manager_slam = Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
@@ -146,7 +137,6 @@ def generate_launch_description():
             ],
         }])
 
-    # Saved-map mode lifecycle: quản lý đầy đủ 8 nodes
     lifecycle_manager_saved = Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',

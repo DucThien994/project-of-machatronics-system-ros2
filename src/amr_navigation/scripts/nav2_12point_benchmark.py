@@ -158,15 +158,25 @@ class TwelvePointBenchmark(Node):
 
         result_future = goal_handle.get_result_async()
         start = time.time()
-        while rclpy.ok():
-            rclpy.spin_once(self, timeout_sec=0.2)
-            elapsed = time.time() - start
-            if result_future.done():
-                break
-            if elapsed > self.args.timeout:
+        try:
+            while rclpy.ok():
+                rclpy.spin_once(self, timeout_sec=0.2)
+                elapsed = time.time() - start
+                if result_future.done():
+                    break
+                if elapsed > self.args.timeout:
+                    cancel_future = goal_handle.cancel_goal_async()
+                    rclpy.spin_until_future_complete(self, cancel_future, timeout_sec=2.0)
+                    return 'TIMEOUT', None, elapsed
+        except KeyboardInterrupt:
+            # Ctrl+C giữa lúc đang chờ goal: hủy goal hiện tại trên Nav2 rồi
+            # ném lại để run() dừng vòng lặp và lưu các điểm đã hoàn thành.
+            try:
                 cancel_future = goal_handle.cancel_goal_async()
                 rclpy.spin_until_future_complete(self, cancel_future, timeout_sec=2.0)
-                return 'TIMEOUT', None, elapsed
+            except Exception:
+                pass
+            raise
 
         elapsed = time.time() - start
         status = result_future.result().status
@@ -203,48 +213,62 @@ class TwelvePointBenchmark(Node):
             self.get_logger().info(
                 f"  P{i+1}: x={x:.2f} y={y:.2f} yaw={yaw_deg:.1f}deg")
 
-        for label, x, y, yaw_deg in goal_points:
-            self.get_logger().info(f"--- Goal '{label}': ({x},{y}, yaw={yaw_deg} deg) ---")
-            goal_qz, goal_qw = yaw_to_quat(yaw_deg)
-            status, final_pose, elapsed = self.send_goal_and_wait(x, y, yaw_deg)
+        f = open(self.args.output, 'w', newline='')
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        f.flush()
 
-            row = {
-                'label': label, 'goal_x': x, 'goal_y': y,
-                'goal_yaw_deg': yaw_deg, 'goal_w': round(goal_qw, 5),
-                'duration_sec': round(elapsed, 2), 'status': status,
-            }
-            if final_pose is not None:
-                fx, fy, fqz, fqw = final_pose
-                final_yaw = quat_to_yaw_deg(fqz, fqw)
-                err_x = fx - x
-                err_y = fy - y
-                err_yaw = ((final_yaw - yaw_deg + 180) % 360) - 180  # wrap [-180,180]
-                row.update({
-                    'final_x': round(fx, 4), 'final_y': round(fy, 4),
-                    'final_yaw_deg': round(final_yaw, 2), 'final_w': round(fqw, 5),
-                    'error_x_m': round(err_x, 4), 'error_y_m': round(err_y, 4),
-                    'error_xy_m': round(math.hypot(err_x, err_y), 4),
-                    'error_yaw_deg': round(err_yaw, 2),
-                    'error_w': round(fqw - goal_qw, 5),
-                })
-                self.get_logger().info(
-                    f"    -> {status} | error_xy={row['error_xy_m']}m "
-                    f"error_yaw={row['error_yaw_deg']}deg t={row['duration_sec']}s")
-            else:
-                row.update({k: '' for k in
-                            ['final_x', 'final_y', 'final_yaw_deg', 'final_w',
-                             'error_x_m', 'error_y_m', 'error_xy_m',
-                             'error_yaw_deg', 'error_w']})
-                self.get_logger().warn(f"    -> {status} (không lấy được TF cuối)")
-            rows.append(row)
+        interrupted = False
+        try:
+            for label, x, y, yaw_deg in goal_points:
+                self.get_logger().info(f"--- Goal '{label}': ({x},{y}, yaw={yaw_deg} deg) ---")
+                goal_qz, goal_qw = yaw_to_quat(yaw_deg)
+                status, final_pose, elapsed = self.send_goal_and_wait(x, y, yaw_deg)
 
-        with open(self.args.output, 'w', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
+                row = {
+                    'label': label, 'goal_x': x, 'goal_y': y,
+                    'goal_yaw_deg': yaw_deg, 'goal_w': round(goal_qw, 5),
+                    'duration_sec': round(elapsed, 2), 'status': status,
+                }
+                if final_pose is not None:
+                    fx, fy, fqz, fqw = final_pose
+                    final_yaw = quat_to_yaw_deg(fqz, fqw)
+                    err_x = fx - x
+                    err_y = fy - y
+                    err_yaw = ((final_yaw - yaw_deg + 180) % 360) - 180  # wrap [-180,180]
+                    row.update({
+                        'final_x': round(fx, 4), 'final_y': round(fy, 4),
+                        'final_yaw_deg': round(final_yaw, 2), 'final_w': round(fqw, 5),
+                        'error_x_m': round(err_x, 4), 'error_y_m': round(err_y, 4),
+                        'error_xy_m': round(math.hypot(err_x, err_y), 4),
+                        'error_yaw_deg': round(err_yaw, 2),
+                        'error_w': round(fqw - goal_qw, 5),
+                    })
+                    self.get_logger().info(
+                        f"    -> {status} | error_xy={row['error_xy_m']}m "
+                        f"error_yaw={row['error_yaw_deg']}deg t={row['duration_sec']}s")
+                else:
+                    row.update({k: '' for k in
+                                ['final_x', 'final_y', 'final_yaw_deg', 'final_w',
+                                 'error_x_m', 'error_y_m', 'error_xy_m',
+                                 'error_yaw_deg', 'error_w']})
+                    self.get_logger().warn(f"    -> {status} (không lấy được TF cuối)")
+                rows.append(row)
+                writer.writerow(row)
+                f.flush()
+        except KeyboardInterrupt:
+            interrupted = True
+            self.get_logger().warn(
+                f"Nhận Ctrl+C — dừng lại, đã lưu {len(rows)}/{len(goal_points)} điểm.")
+        finally:
+            f.close()
 
         self._print_summary(rows)
-        self.get_logger().info(f"Đã lưu: {self.args.output}")
+        if interrupted:
+            self.get_logger().info(
+                f"Đã lưu (một phần, {len(rows)}/{len(goal_points)} điểm): {self.args.output}")
+        else:
+            self.get_logger().info(f"Đã lưu: {self.args.output}")
 
     def _print_summary(self, rows):
         ok = [r for r in rows if r['status'] == 'SUCCEEDED' and r['error_xy_m'] != '']
